@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Restaurant - Commandes</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>👨‍🍳 COMMANDES EN DIRECT</h1>
+        <div id="commandes" class="commandes-list">
+            <p>Chargement des commandes...</p>
+        </div>
+    </div>
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbx___A_REMPLACER___/exec";
+        let timers = {};
+        
+        async function chargerCommandes() {
+            try {
+                const response = await fetch(API_URL + "?action=getOrders");
+                const commandes = await response.json();
+                afficherCommandes(commandes);
+            } catch(e) {
+                console.log("Attente des commandes...");
+            }
+        }
+        
+        function afficherCommandes(commandes) {
+            const container = document.getElementById('commandes');
+            if(!commandes || commandes.length === 0) {
+                container.innerHTML = '<p>📭 Aucune commande pour le moment</p>';
+                return;
+            }
+            
+            let html = '';
+            commandes.forEach((cmd, idx) => {
+                const tempsRestant = cmd.tempsRestant || cmd.tempsPrep;
+                const statusClass = tempsRestant <= 0 ? 'urgent' : (tempsRestant <= 2 ? 'warning' : 'normal');
+                html += `
+                    <div class="commande-card ${statusClass}" data-id="${idx}">
+                        <div class="client">🧑 ${cmd.nom || cmd.client}</div>
+                        <div class="plat">🍔 ${cmd.plat}</div>
+                        <div class="prix💰">${cmd.prix || 8}€</div>
+                        <div class="chrono" id="chrono-${idx}">⏱️ ${Math.floor(tempsRestant)}:${Math.floor((tempsRestant%1)*60)}</div>
+                        <div class="actions">
+                            <button onclick="marquerPret(${idx})">✅ Prêt</button>
+                            <button onclick="annulerCommande(${idx})">❌ Annuler</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            
+            // Démarrer les chronos
+            commandes.forEach((cmd, idx) => {
+                if(!timers[idx] && cmd.status !== 'pret') {
+                    demarrerChrono(idx, cmd.tempsPrep || 10);
+                }
+            });
+        }
+        
+        function demarrerChrono(idx, duree) {
+            let temps = duree;
+            timers[idx] = setInterval(() => {
+                temps -= 1/60;
+                const element = document.getElementById(`chrono-${idx}`);
+                if(element) {
+                    const mins = Math.floor(Math.max(0, temps));
+                    const secs = Math.floor((temps % 1) * 60);
+                    element.textContent = `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
+                    if(temps <= 0) {
+                        clearInterval(timers[idx]);
+                        element.textContent = "🔴 EN RETARD !";
+                        element.parentElement.classList.add('urgent');
+                    }
+                }
+            }, 1000);
+        }
+        
+        function marquerPret(idx) {
+            if(timers[idx]) clearInterval(timers[idx]);
+            alert("Commande marquée comme prête !");
+        }
+        
+        function annulerCommande(idx) {
+            if(timers[idx]) clearInterval(timers[idx]);
+            alert("Commande annulée");
+        }
+        
+        setInterval(chargerCommandes, 3000);
+        chargerCommandes();
+    </script>
+</body>
+</html>
