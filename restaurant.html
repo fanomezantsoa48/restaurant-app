@@ -5,40 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurant - Commandes</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .commande-card {
+            border: 1px solid #ccc;
+            margin: 10px;
+            padding: 15px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .commande-card.urgent {
+            background: #f8d7da;
+            border-left: 5px solid #dc3545;
+        }
+        .commande-card.normal {
+            background: #f8f9fa;
+            border-left: 5px solid #28a745;
+        }
+        .btn-pret {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-annuler {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-pret:hover, .btn-annuler:hover {
+            opacity: 0.8;
+        }
+        .chrono {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .refresh-btn {
+            background: #007bff;
+            color: white;
+            padding: 8px 16px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>👨‍🍳 COMMANDES EN DIRECT</h1>
-        <button onclick="chargerCommandes()" style="margin-bottom: 15px; padding: 8px 16px;">🔄 Rafraîchir</button>
+        <button class="refresh-btn" onclick="chargerCommandes()">🔄 Rafraîchir</button>
         <div id="commandes" class="commandes-list">
-            <p>📭 Cliquez sur Rafraîchir pour voir les commandes</p>
+            <p>📭 Chargement...</p>
         </div>
     </div>
     <script>
-        // TON URL Google Apps Script - À VÉRIFIER
-      const API_URL = "https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6eRWZWSdkiml5gEhHYRbe5WSfT_YFO1eHa7W4jQnw5ubK35HFKKdGap/exec";
+        // TON URL Google Apps Script
+        const API_URL = "https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6eRWZWSdkiml5gEhHYRbe5WSfT_YFO1eHa7W4jQnw5ubK35HFKKdGap/exec";
         
         let timers = {};
         
         async function chargerCommandes() {
             const container = document.getElementById('commandes');
-            container.innerHTML = '<p>⏳ Chargement en cours...</p>';
+            container.innerHTML = '<p>⏳ Chargement...</p>';
             
             try {
-                console.log("Appel API :", API_URL + "?action=getOrders");
                 const response = await fetch(API_URL + "?action=getOrders");
-                const data = await response.json();
-                console.log("Données reçues :", data);
+                const commandes = await response.json();
                 
-                if(!data || data.length === 0) {
+                if(!commandes || commandes.length === 0) {
                     container.innerHTML = '<p>📭 Aucune commande pour le moment</p>';
                     return;
                 }
                 
-                afficherCommandes(data);
+                afficherCommandes(commandes);
+                demarrerTousLesChronos(commandes);
             } catch(error) {
-                console.error("Erreur détaillée:", error);
-                container.innerHTML = '<p>❌ Erreur de connexion : ' + error.message + '</p>';
+                console.error("Erreur:", error);
+                container.innerHTML = '<p>❌ Erreur de connexion</p>';
             }
         }
         
@@ -47,20 +97,28 @@
             let html = '';
             
             commandes.forEach((cmd, idx) => {
-                let tempsRestant = cmd.tempsPrep || 10;
-                let chronoId = `chrono-${Date.now()}-${idx}`;
+                const tempsRestant = cmd.tempsRestant !== undefined ? cmd.tempsRestant : (cmd.tempsPrep || 10);
+                const estUrgent = tempsRestant <= 0;
+                const estBientotFini = tempsRestant <= 2 && tempsRestant > 0;
+                let couleurFond = "#f8f9fa";
+                if(estUrgent) couleurFond = "#f8d7da";
+                else if(estBientotFini) couleurFond = "#fff3cd";
+                
+                const mins = Math.floor(Math.max(0, tempsRestant));
+                const secs = Math.floor((Math.max(0, tempsRestant) % 1) * 60);
+                const affichageTemps = tempsRestant <= 0 ? "🔴 EN RETARD !" : `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
                 
                 html += `
-                    <div class="commande-card" style="border:1px solid #ccc; margin:10px; padding:10px; border-radius:10px;">
-                        <div><strong>🧑 ${cmd.nom || cmd[0]}</strong></div>
-                        <div>📞 ${cmd.tel || cmd[1]}</div>
-                        <div>🍔 ${cmd.plat || cmd[2]}</div>
-                        <div>💰 ${cmd.prix || cmd[3]}€</div>
-                        <div>⏰ ${cmd.heure || cmd[4]}</div>
-                        <div class="chrono" id="${chronoId}">⏱️ ${tempsRestant} min</div>
-                        <div class="actions" style="margin-top:10px;">
-                            <button onclick="alerterPret(${idx})">✅ Prêt</button>
-                            <button onclick="alerterAnnuler(${idx})">❌ Annuler</button>
+                    <div class="commande-card" style="background:${couleurFond};" data-idx="${idx}">
+                        <div><strong>🧑 ${cmd.nom}</strong></div>
+                        <div>📞 ${cmd.tel || 'Non spécifié'}</div>
+                        <div>🍔 ${cmd.plat}</div>
+                        <div>💰 ${cmd.prix} Ar</div>
+                        <div>⏰ Réservation: ${cmd.heure || '---'}</div>
+                        <div class="chrono" id="chrono-${idx}">${affichageTemps}</div>
+                        <div style="margin-top:10px;">
+                            <button class="btn-pret" onclick="marquerPret(${idx})">✅ Prêt</button>
+                            <button class="btn-annuler" onclick="annulerCommande(${idx})">❌ Annuler</button>
                         </div>
                     </div>
                 `;
@@ -69,18 +127,72 @@
             container.innerHTML = html;
         }
         
-        function alerterPret(idx) {
-            alert("✅ Commande marquée comme prête !");
-            chargerCommandes();
+        function demarrerTousLesChronos(commandes) {
+            // Arrêter tous les chronos existants
+            for(let id in timers) {
+                clearInterval(timers[id]);
+                delete timers[id];
+            }
+            
+            // Démarrer les chronos pour chaque commande
+            commandes.forEach((cmd, idx) => {
+                let temps = cmd.tempsRestant !== undefined ? cmd.tempsRestant : (cmd.tempsPrep || 10);
+                if(temps > 0) {
+                    timers[idx] = setInterval(() => {
+                        temps -= 1/60;
+                        if(temps < 0) temps = 0;
+                        
+                        // Sauvegarder le temps restant dans la commande
+                        cmd.tempsRestant = temps;
+                        
+                        const element = document.getElementById(`chrono-${idx}`);
+                        if(element) {
+                            if(temps <= 0) {
+                                clearInterval(timers[idx]);
+                                element.textContent = '🔴 EN RETARD !';
+                                element.parentElement.parentElement.style.background = "#f8d7da";
+                            } else {
+                                const mins = Math.floor(temps);
+                                const secs = Math.floor((temps % 1) * 60);
+                                element.textContent = `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
+                            }
+                        }
+                    }, 1000);
+                }
+            });
         }
         
-        function alerterAnnuler(idx) {
-            alert("❌ Commande annulée");
-            chargerCommandes();
+        async function marquerPret(rowIndex) {
+            if(confirm("✅ Confirmer que la commande est prête ?")) {
+                try {
+                    await fetch(`${API_URL}?action=deleteOrder&rowIndex=${rowIndex}`, { method: 'DELETE' });
+                    if(timers[rowIndex]) clearInterval(timers[rowIndex]);
+                    chargerCommandes();
+                    alert("✅ Commande marquée comme prête et supprimée");
+                } catch(e) {
+                    console.error("Erreur:", e);
+                    alert("❌ Erreur lors de la suppression");
+                }
+            }
         }
         
-        // Charger au démarrage
+        async function annulerCommande(rowIndex) {
+            if(confirm("❌ Annuler cette commande ?")) {
+                try {
+                    await fetch(`${API_URL}?action=deleteOrder&rowIndex=${rowIndex}`, { method: 'DELETE' });
+                    if(timers[rowIndex]) clearInterval(timers[rowIndex]);
+                    chargerCommandes();
+                    alert("❌ Commande annulée et supprimée");
+                } catch(e) {
+                    console.error("Erreur:", e);
+                    alert("❌ Erreur lors de la suppression");
+                }
+            }
+        }
+        
+        // Charger au démarrage et toutes les 5 secondes
         chargerCommandes();
+        setInterval(chargerCommandes, 5000);
     </script>
 </body>
 </html>
