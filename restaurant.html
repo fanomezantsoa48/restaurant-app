@@ -1,45 +1,40 @@
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Restaurant</title>
-</head>
+<html>
+<head><title>Restaurant</title></head>
 <body>
-    <h1>COMMANDES</h1>
-    <button onclick="charger()">Charger</button>
-    <div id="liste"></div>
+<h1>COMMANDES</h1>
+<button onclick="charger()">Charger</button>
+<div id="liste"></div>
 
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6eRWZWSdkiml5gEhHYRbe5WSfT_YFO1eHa7W4jQnw5ubK35HFKKdGap/exec";
-        
-        async function charger() {
-            const response = await fetch(API_URL + "?action=getOrders");
-            const commandes = await response.json();
-            
-            let html = "";
-            commandes.forEach((cmd, index) => {
-                html += `
-                    <div style="border:1px solid black; margin:10px; padding:10px">
-                        <div>${cmd.nom} - ${cmd.plat} - ${cmd.prix} Ar</div>
-                        <div>ID: ${cmd.id}</div>
-                        <div>Heure début: ${cmd.heureDebut}</div>
-                        <button onclick="supprimer(${cmd.id})">✅ Supprimer</button>
-                    </div>
-                `;
-            });
-            document.getElementById('liste').innerHTML = html || "Aucune commande";
-        }
-        
-        async function supprimer(id) {
-            if(confirm("Supprimer la commande ID " + id + " ?")) {
-                const response = await fetch(API_URL + "?action=deleteOrder&id=" + id);
-                const resultat = await response.text();
-                alert("Réponse: " + resultat);
-                charger();
-            }
-        }
-        
+<script>
+const API_URL = "https://script.google.com/macros/s/TA_NOUVELLE_URL_ICI/exec";
+
+async function charger() {
+    const r = await fetch(API_URL + "?action=getOrders");
+    const commandes = await r.json();
+    let html = "";
+    commandes.forEach(cmd => {
+        html += `
+            <div style="border:1px solid black; margin:10px; padding:10px">
+                <div>${cmd.nom} - ${cmd.plat} - ${cmd.prix} Ar</div>
+                <div>ID: ${cmd.id}</div>
+                <button onclick="supprimer(${cmd.id})">✅ Supprimer</button>
+            </div>
+        `;
+    });
+    document.getElementById('liste').innerHTML = html || "Aucune commande";
+}
+
+async function supprimer(id) {
+    if(confirm("Supprimer ID " + id + " ?")) {
+        const r = await fetch(API_URL + "?action=deleteOrder&id=" + id);
+        const reponse = await r.text();
+        alert(reponse);
         charger();
-    </script>
+    }
+}
+
+charger();
+</script>
 </body>
 </html>
