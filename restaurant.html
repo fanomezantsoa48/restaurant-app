@@ -9,117 +9,77 @@
 <body>
     <div class="container">
         <h1>👨‍🍳 COMMANDES EN DIRECT</h1>
+        <button onclick="chargerCommandes()" style="margin-bottom: 15px; padding: 8px 16px;">🔄 Rafraîchir</button>
         <div id="commandes" class="commandes-list">
-            <p>Chargement des commandes...</p>
+            <p>📭 Cliquez sur Rafraîchir pour voir les commandes</p>
         </div>
     </div>
     <script>
-        // TON URL Google Apps Script
+        // TON URL Google Apps Script - À VÉRIFIER
         const API_URL = "https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6eRWZWSdkiml5gEhHYRbe5WSfT_YFO1eHa7W4jQnw5ubK35HFKKdGap/exec";
         
         let timers = {};
         
         async function chargerCommandes() {
+            const container = document.getElementById('commandes');
+            container.innerHTML = '<p>⏳ Chargement en cours...</p>';
+            
             try {
+                console.log("Appel API :", API_URL + "?action=getOrders");
                 const response = await fetch(API_URL + "?action=getOrders");
-                const commandes = await response.json();
-                afficherCommandes(commandes);
-            } catch(e) {
-                console.log("Erreur de chargement:", e);
-                document.getElementById('commandes').innerHTML = '<p>🔌 Connexion en cours...</p>';
+                const data = await response.json();
+                console.log("Données reçues :", data);
+                
+                if(!data || data.length === 0) {
+                    container.innerHTML = '<p>📭 Aucune commande pour le moment</p>';
+                    return;
+                }
+                
+                afficherCommandes(data);
+            } catch(error) {
+                console.error("Erreur détaillée:", error);
+                container.innerHTML = '<p>❌ Erreur de connexion : ' + error.message + '</p>';
             }
         }
         
         function afficherCommandes(commandes) {
             const container = document.getElementById('commandes');
-            if(!commandes || commandes.length === 0) {
-                container.innerHTML = '<p>📭 Aucune commande pour le moment</p>';
-                return;
-            }
-            
             let html = '';
+            
             commandes.forEach((cmd, idx) => {
-                // Gérer le temps restant (si pas défini, prendre tempsPrep)
-                let tempsRestant = cmd.tempsRestant !== undefined ? cmd.tempsRestant : cmd.tempsPrep;
-                let statusClass = 'normal';
-                
-                if(tempsRestant <= 0) {
-                    statusClass = 'urgent';
-                } else if(tempsRestant <= 2) {
-                    statusClass = 'warning';
-                }
-                
-                // Formater l'affichage du temps
-                let chronoText = '';
-                if(tempsRestant > 0) {
-                    const mins = Math.floor(tempsRestant);
-                    const secs = Math.floor((tempsRestant % 1) * 60);
-                    chronoText = `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
-                } else {
-                    chronoText = '🔴 EN RETARD !';
-                }
+                let tempsRestant = cmd.tempsPrep || 10;
+                let chronoId = `chrono-${Date.now()}-${idx}`;
                 
                 html += `
-                    <div class="commande-card ${statusClass}" data-id="${cmd.id || idx}">
-                        <div><strong>🧑 ${cmd.nom}</strong></div>
-                        <div>📞 ${cmd.tel || 'Non spécifié'}</div>
-                        <div>🍔 ${cmd.plat}</div>
-                        <div>💰 ${cmd.prix}€</div>
-                        <div>⏰ Réservation: ${cmd.heure || '---'}</div>
-                        <div class="chrono" id="chrono-${idx}">${chronoText}</div>
-                        <div class="actions">
-                            <button onclick="marquerPret(${idx})">✅ Prêt</button>
-                            <button onclick="annulerCommande(${idx})">❌ Annuler</button>
+                    <div class="commande-card" style="border:1px solid #ccc; margin:10px; padding:10px; border-radius:10px;">
+                        <div><strong>🧑 ${cmd.nom || cmd[0]}</strong></div>
+                        <div>📞 ${cmd.tel || cmd[1]}</div>
+                        <div>🍔 ${cmd.plat || cmd[2]}</div>
+                        <div>💰 ${cmd.prix || cmd[3]}€</div>
+                        <div>⏰ ${cmd.heure || cmd[4]}</div>
+                        <div class="chrono" id="${chronoId}">⏱️ ${tempsRestant} min</div>
+                        <div class="actions" style="margin-top:10px;">
+                            <button onclick="alerterPret(${idx})">✅ Prêt</button>
+                            <button onclick="alerterAnnuler(${idx})">❌ Annuler</button>
                         </div>
                     </div>
                 `;
             });
-            container.innerHTML = html;
             
-            // Démarrer les chronos
-            commandes.forEach((cmd, idx) => {
-                let tempsRestant = cmd.tempsRestant !== undefined ? cmd.tempsRestant : cmd.tempsPrep;
-                if(tempsRestant > 0 && !timers[idx]) {
-                    demarrerChrono(idx, tempsRestant, cmd);
-                }
-            });
+            container.innerHTML = html;
         }
         
-        function demarrerChrono(idx, duree, commande) {
-            let temps = duree;
-            timers[idx] = setInterval(() => {
-                temps -= 1/60;
-                if(temps < 0) temps = 0;
-                
-                const element = document.getElementById(`chrono-${idx}`);
-                if(element) {
-                    if(temps <= 0) {
-                        clearInterval(timers[idx]);
-                        element.textContent = '🔴 EN RETARD !';
-                        element.parentElement.classList.add('urgent');
-                    } else {
-                        const mins = Math.floor(temps);
-                        const secs = Math.floor((temps % 1) * 60);
-                        element.textContent = `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
-                    }
-                }
-            }, 1000);
-        }
-        
-        function marquerPret(idx) {
-            if(timers[idx]) clearInterval(timers[idx]);
+        function alerterPret(idx) {
             alert("✅ Commande marquée comme prête !");
-            chargerCommandes(); // Rafraîchir
+            chargerCommandes();
         }
         
-        function annulerCommande(idx) {
-            if(timers[idx]) clearInterval(timers[idx]);
+        function alerterAnnuler(idx) {
             alert("❌ Commande annulée");
-            chargerCommandes(); // Rafraîchir
+            chargerCommandes();
         }
         
-        // Rafraîchir toutes les 3 secondes
-        setInterval(chargerCommandes, 3000);
+        // Charger au démarrage
         chargerCommandes();
     </script>
 </body>
