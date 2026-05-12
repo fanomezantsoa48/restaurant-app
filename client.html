@@ -64,22 +64,30 @@
                 timestamp: new Date().toISOString()
             };
             
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = '<p style="color:blue">⏳ Envoi en cours...</p>';
+            
             try {
-                const response = await fetch(API_URL + "?action=addOrder", {
+                const response = await fetch(API_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(commande)
                 });
-                document.getElementById('message').innerHTML = '<p style="color:green">✅ Commande envoyée !</p>';
+                
+                messageDiv.innerHTML = '<p style="color:green">✅ Commande envoyée !</p>';
                 document.getElementById('orderForm').reset();
                 document.getElementById('prix').textContent = '0';
                 
+                // Afficher la commande dans la console pour vérifier
+                console.log("Commande envoyée :", commande);
+                
                 setTimeout(() => {
-                    document.getElementById('message').innerHTML = '';
-                }, 3000);
+                    messageDiv.innerHTML = '';
+                }, 4000);
             } catch(error) {
-                document.getElementById('message').innerHTML = '<p style="color:red">❌ Erreur, réessayez</p>';
+                console.error("Erreur :", error);
+                messageDiv.innerHTML = '<p style="color:red">❌ Erreur réseau. Réessayez.</p>';
             }
         });
     </script>
