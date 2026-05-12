@@ -65,13 +65,31 @@
         let timers = {};
         let commandesActuelles = [];
         
+        // Calculer le temps restant à partir de l'heure de début
+        function calculerTempsRestant(commande) {
+            if(!commande.heureDebut) return commande.tempsPrep || 10;
+            
+            const debut = new Date(commande.heureDebut);
+            const maintenant = new Date();
+            const fin = new Date(debut.getTime() + (commande.tempsPrep * 60000));
+            let restant = (fin - maintenant) / 60000;
+            return restant < 0 ? 0 : restant;
+        }
+        
         async function chargerCommandes() {
             const container = document.getElementById('commandes');
             container.innerHTML = '<p>⏳ Chargement...</p>';
             
             try {
                 const response = await fetch(API_URL + "?action=getOrders");
-                const commandes = await response.json();
+                let commandes = await response.json();
+                
+                // Ajouter le temps restant calculé à chaque commande
+                commandes = commandes.map(cmd => ({
+                    ...cmd,
+                    tempsRestant: calculerTempsRestant(cmd)
+                }));
+                
                 commandesActuelles = commandes;
                 
                 if(!commandes || commandes.length === 0) {
@@ -92,7 +110,7 @@
             let html = '';
             
             commandes.forEach((cmd, idx) => {
-                const tempsRestant = cmd.tempsRestant !== undefined ? cmd.tempsRestant : (cmd.tempsPrep || 10);
+                const tempsRestant = cmd.tempsRestant;
                 const estUrgent = tempsRestant <= 0;
                 const couleurFond = estUrgent ? "#f8d7da" : "#f8f9fa";
                 
@@ -128,7 +146,7 @@
             
             // Démarrer les chronos pour chaque commande
             commandes.forEach((cmd, idx) => {
-                let temps = cmd.tempsRestant !== undefined ? cmd.tempsRestant : (cmd.tempsPrep || 10);
+                let temps = cmd.tempsRestant;
                 if(temps > 0) {
                     timers[idx] = setInterval(() => {
                         temps -= 1/60;
@@ -159,7 +177,6 @@
         async function marquerPret(rowIndex) {
             if(confirm("✅ Confirmer que cette commande est prête ?")) {
                 try {
-                    // L'index dans Google Sheets est rowIndex + 2 (car ligne 1 = en-têtes)
                     const sheetRowIndex = rowIndex + 2;
                     await fetch(API_URL + "?action=deleteOrder&rowIndex=" + sheetRowIndex);
                     
@@ -176,7 +193,6 @@
         async function annulerCommande(rowIndex) {
             if(confirm("❌ Annuler cette commande ?")) {
                 try {
-                    // L'index dans Google Sheets est rowIndex + 2 (car ligne 1 = en-têtes)
                     const sheetRowIndex = rowIndex + 2;
                     await fetch(API_URL + "?action=deleteOrder&rowIndex=" + sheetRowIndex);
                     
@@ -192,7 +208,7 @@
         
         // Charger au démarrage et toutes les 10 secondes
         chargerCommandes();
-        setInterval(chargerCommandes, 30000);
+        setInterval(chargerCommandes, 10000);
     </script>
 </body>
 </html>
