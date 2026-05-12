@@ -10,7 +10,33 @@
 <div id="msg"></div>
 
 <script>
+const API_URL = "<!DOCTYPE html>
+<html>
+<head><title>Commander</title></head>
+<body>
+<h1>🍔 COMMANDER</h1>
+<input type="text" id="nom" placeholder="Votre nom">
+<input type="text" id="plat" placeholder="Plat (Burger/Tacos)">
+<input type="number" id="prix" placeholder="Prix">
+<button onclick="commander()">✅ COMMANDER</button>
+<div id="msg"></div>
+
+<script>
 const API_URL = "https://script.google.com/macros/s/TA_URL_ICI/exec";
+
+async function commander() {
+    const commande = {
+        nom: document.getElementById('nom').value,
+        plat: document.getElementById('plat').value,
+        prix: document.getElementById('prix').value,
+        id: Date.now()
+    };
+    await fetch(API_URL, { method: 'POST', body: JSON.stringify(commande) });
+    document.getElementById('msg').innerHTML = "✅ Commande envoyée ! ID: " + commande.id;
+}
+</script>
+</body>
+</html>";
 
 async function commander() {
     const commande = {
