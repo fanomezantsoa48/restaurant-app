@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Respantrie - Administration Restaurant</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
     <div class="container restaurant-container">
@@ -29,90 +28,133 @@
             </div>
         </div>
 
+        <div style="margin: 20px 0; display: flex; gap: 10px;">
+            <button onclick="loadOrders()" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                🔄 Actualiser les commandes
+            </button>
+            <button onclick="addTestOrder()" style="padding: 10px 20px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                ➕ Ajouter commande test
+            </button>
+        </div>
+
         <div class="orders-container" id="ordersContainer">
             <p class="no-orders">Aucune commande en cours...</p>
         </div>
     </div>
 
     <script>
-      const API_URL = 'https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6erRWWSDml5gEhHYRbe5WSfT_YFO1EH7W4jQnw5ub35HFKKdGap/exec' ;
-        let currentOrders = [];
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6eRWZWSdkiml5gEhHYRbe5WSfT_YFO1eHa7W4jQnw5ubK35HFKKdGap/exec';
+        let currentOrders = [
+            {
+                orderNumber: 1,
+                customerName: "Jean Dupont",
+                items: [{name: "Poulet rôti"}, {name: "Salade César"}],
+                total: 22.00,
+                orderTime: new Date(Date.now() - 5 * 60000).toISOString(),
+                maxPrepTime: 15,
+                status: "preparing",
+                preparationStartTime: new Date(Date.now() - 5 * 60000).toISOString()
+            },
+            {
+                orderNumber: 2,
+                customerName: "Marie Martin",
+                items: [{name: "Saumon grillé"}],
+                total: 15.00,
+                orderTime: new Date().toISOString(),
+                maxPrepTime: 12,
+                status: "pending",
+                preparationStartTime: null
+            }
+        ];
 
         async function loadOrders() {
             try {
                 const response = await fetch(`${API_URL}?action=getOrders`);
                 if (response.ok) {
                     const data = await response.json();
-                    currentOrders = data.orders || [];
-                    displayOrders();
-                    updateStats();
+                    if (data.orders && data.orders.length > 0) {
+                        currentOrders = data.orders;
+                    }
                 }
             } catch (error) {
-                console.log('Mode démo - données simulées');
-                // Données de démonstration
-                currentOrders = [
-                    {
-                        orderNumber: 1,
-                        customerName: "Jean Dupont",
-                        items: [{name: "Poulet rôti", price: 12.50}],
-                        total: 12.50,
-                        orderTime: new Date().toISOString(),
-                        maxPrepTime: 15,
-                        status: "preparing",
-                        preparationStartTime: new Date().toISOString()
-                    }
-                ];
-                displayOrders();
-                updateStats();
+                console.log('Mode démo - utilisation des données de test');
             }
+            displayOrders();
+            updateStats();
+        }
+
+        function addTestOrder() {
+            const newOrder = {
+                orderNumber: currentOrders.length + 1,
+                customerName: "Client Test " + (currentOrders.length + 1),
+                items: [{name: "Pâtes Bolognaise"}],
+                total: 10.00,
+                orderTime: new Date().toISOString(),
+                maxPrepTime: 10,
+                status: "pending",
+                preparationStartTime: null
+            };
+            currentOrders.push(newOrder);
+            displayOrders();
+            updateStats();
         }
 
         function displayOrders() {
             const container = document.getElementById('ordersContainer');
             
             if (!currentOrders || currentOrders.length === 0) {
-                container.innerHTML = '<p class="no-orders">Aucune commande en cours...</p>';
+                container.innerHTML = `
+                    <p class="no-orders">
+                        🍳 Aucune commande en cours...<br>
+                        <small>Les nouvelles commandes apparaîtront ici</small>
+                    </p>`;
                 return;
             }
 
             container.innerHTML = currentOrders.map(order => {
                 const timeRemaining = calculateTimeRemaining(order);
                 const statusClass = getStatusClass(order.status);
+                const statusText = {
+                    'pending': 'En attente',
+                    'preparing': 'En préparation',
+                    'ready': 'Prêt',
+                    'served': 'Servi'
+                };
                 
                 return `
                     <div class="order-card ${statusClass}">
                         <div class="order-header">
                             <h3>Commande #${order.orderNumber}</h3>
-                            <span class="order-status-badge">${order.status}</span>
+                            <span class="order-status-badge">${statusText[order.status] || order.status}</span>
                         </div>
                         
                         <div class="order-details">
-                            <p><strong>Client :</strong> ${order.customerName}</p>
+                            <p><strong>👤 Client :</strong> ${order.customerName}</p>
                             <div class="order-items">
                                 ${order.items.map(item => `
-                                    <span class="item-tag">${item.name}</span>
+                                    <span class="item-tag">🍽️ ${item.name}</span>
                                 `).join('')}
                             </div>
-                            <p><strong>Total :</strong> ${order.total.toFixed(2)} €</p>
+                            <p><strong>💰 Total :</strong> ${order.total.toFixed(2)} €</p>
                             <div class="time-info">
-                                <p><strong>Temps restant :</strong> ${timeRemaining}</p>
+                                <p><strong>⏱️ Temps restant :</strong> ${timeRemaining}</p>
                             </div>
                         </div>
 
                         <div class="order-actions">
                             ${order.status === 'pending' ? `
                                 <button class="action-btn start-btn" onclick="updateOrderStatus(${order.orderNumber}, 'preparing')">
-                                    Commencer la préparation
+                                    🔪 Commencer la préparation
                                 </button>
                             ` : ''}
                             ${order.status === 'preparing' ? `
                                 <button class="action-btn ready-btn" onclick="updateOrderStatus(${order.orderNumber}, 'ready')">
-                                    Plat prêt ! 🍽️
+                                    🍽️ Plat prêt !
                                 </button>
                             ` : ''}
                             ${order.status === 'ready' ? `
                                 <button class="action-btn done-btn" onclick="updateOrderStatus(${order.orderNumber}, 'served')">
-                                    Servi au client
+                                    ✅ Servi au client
                                 </button>
                             ` : ''}
                         </div>
@@ -129,11 +171,11 @@
             const now = new Date();
             const remaining = readyTime - now;
             
-            if (remaining <= 0) return '⌛ Temps écoulé';
+            if (remaining <= 0) return '⌛ Temps écoulé - Vérifier le plat';
             
             const minutes = Math.floor(remaining / 60000);
             const seconds = Math.floor((remaining % 60000) / 1000);
-            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            return `${minutes} min ${seconds.toString().padStart(2, '0')} sec`;
         }
 
         function getStatusClass(status) {
@@ -157,7 +199,6 @@
                 console.log('Mode hors-ligne : mise à jour simulée');
             }
             
-            // Mise à jour locale
             const order = currentOrders.find(o => o.orderNumber === orderNumber);
             if (order) {
                 order.status = newStatus;
@@ -184,19 +225,22 @@
             const now = new Date();
             document.getElementById('currentTime').textContent = 
                 now.toLocaleString('fr-FR', { 
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long', 
+                    day: 'numeric',
                     hour: '2-digit', 
                     minute: '2-digit', 
                     second: '2-digit' 
                 });
             
-            // Actualisation des temps restants toutes les minutes
-            if (now.getSeconds() % 5 === 0) {
-                displayOrders();
-            }
+            // Actualisation des temps restants
+            displayOrders();
         }
 
-        // Actualisation automatique toutes les 30 secondes
-        setInterval(loadOrders, 300000);
+        // Actualisation toutes les 30 secondes pour Google Sheets
+        setInterval(loadOrders, 30000);
+        // Actualisation de l'affichage chaque seconde
         setInterval(updateTime, 1000);
         
         // Premier chargement
