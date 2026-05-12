@@ -17,10 +17,6 @@
             background: #f8d7da;
             border-left: 5px solid #dc3545;
         }
-        .commande-card.normal {
-            background: #f8f9fa;
-            border-left: 5px solid #28a745;
-        }
         .btn-pret {
             background: #28a745;
             color: white;
@@ -37,9 +33,6 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-        }
-        .btn-pret:hover, .btn-annuler:hover {
-            opacity: 0.8;
         }
         .chrono {
             font-size: 20px;
@@ -70,6 +63,7 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6eRWZWSdkiml5gEhHYRbe5WSfT_YFO1eHa7W4jQnw5ubK35HFKKdGap/exec";
         
         let timers = {};
+        let commandesActuelles = [];
         
         async function chargerCommandes() {
             const container = document.getElementById('commandes');
@@ -78,6 +72,7 @@
             try {
                 const response = await fetch(API_URL + "?action=getOrders");
                 const commandes = await response.json();
+                commandesActuelles = commandes;
                 
                 if(!commandes || commandes.length === 0) {
                     container.innerHTML = '<p>📭 Aucune commande pour le moment</p>';
@@ -99,17 +94,14 @@
             commandes.forEach((cmd, idx) => {
                 const tempsRestant = cmd.tempsRestant !== undefined ? cmd.tempsRestant : (cmd.tempsPrep || 10);
                 const estUrgent = tempsRestant <= 0;
-                const estBientotFini = tempsRestant <= 2 && tempsRestant > 0;
-                let couleurFond = "#f8f9fa";
-                if(estUrgent) couleurFond = "#f8d7da";
-                else if(estBientotFini) couleurFond = "#fff3cd";
+                const couleurFond = estUrgent ? "#f8d7da" : "#f8f9fa";
                 
                 const mins = Math.floor(Math.max(0, tempsRestant));
                 const secs = Math.floor((Math.max(0, tempsRestant) % 1) * 60);
                 const affichageTemps = tempsRestant <= 0 ? "🔴 EN RETARD !" : `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
                 
                 html += `
-                    <div class="commande-card" style="background:${couleurFond};" data-idx="${idx}">
+                    <div class="commande-card ${estUrgent ? 'urgent' : ''}" data-idx="${idx}">
                         <div><strong>🧑 ${cmd.nom}</strong></div>
                         <div>📞 ${cmd.tel || 'Non spécifié'}</div>
                         <div>🍔 ${cmd.plat}</div>
@@ -142,8 +134,10 @@
                         temps -= 1/60;
                         if(temps < 0) temps = 0;
                         
-                        // Sauvegarder le temps restant dans la commande
-                        cmd.tempsRestant = temps;
+                        // Sauvegarder le temps restant
+                        if(commandesActuelles[idx]) {
+                            commandesActuelles[idx].tempsRestant = temps;
+                        }
                         
                         const element = document.getElementById(`chrono-${idx}`);
                         if(element) {
@@ -163,12 +157,15 @@
         }
         
         async function marquerPret(rowIndex) {
-            if(confirm("✅ Confirmer que la commande est prête ?")) {
+            if(confirm("✅ Confirmer que cette commande est prête ?")) {
                 try {
-                    await fetch(`${API_URL}?action=deleteOrder&rowIndex=${rowIndex}`, { method: 'DELETE' });
+                    // L'index dans Google Sheets est rowIndex + 2 (car ligne 1 = en-têtes)
+                    const sheetRowIndex = rowIndex + 2;
+                    await fetch(API_URL + "?action=deleteOrder&rowIndex=" + sheetRowIndex);
+                    
                     if(timers[rowIndex]) clearInterval(timers[rowIndex]);
                     chargerCommandes();
-                    alert("✅ Commande marquée comme prête et supprimée");
+                    alert("✅ Commande prête - Supprimée");
                 } catch(e) {
                     console.error("Erreur:", e);
                     alert("❌ Erreur lors de la suppression");
@@ -179,10 +176,13 @@
         async function annulerCommande(rowIndex) {
             if(confirm("❌ Annuler cette commande ?")) {
                 try {
-                    await fetch(`${API_URL}?action=deleteOrder&rowIndex=${rowIndex}`, { method: 'DELETE' });
+                    // L'index dans Google Sheets est rowIndex + 2 (car ligne 1 = en-têtes)
+                    const sheetRowIndex = rowIndex + 2;
+                    await fetch(API_URL + "?action=deleteOrder&rowIndex=" + sheetRowIndex);
+                    
                     if(timers[rowIndex]) clearInterval(timers[rowIndex]);
                     chargerCommandes();
-                    alert("❌ Commande annulée et supprimée");
+                    alert("❌ Commande annulée - Supprimée");
                 } catch(e) {
                     console.error("Erreur:", e);
                     alert("❌ Erreur lors de la suppression");
@@ -190,9 +190,9 @@
             }
         }
         
-        // Charger au démarrage et toutes les 5 secondes
+        // Charger au démarrage et toutes les 10 secondes
         chargerCommandes();
-        setInterval(chargerCommandes, 60000);
+        setInterval(chargerCommandes, 10000);
     </script>
 </body>
 </html>
