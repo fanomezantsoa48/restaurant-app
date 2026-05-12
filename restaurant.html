@@ -1,35 +1,207 @@
 <!DOCTYPE html>
-<html>
-<head><title>Restaurant</title></head>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Respantrie - Administration Restaurant</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
 <body>
-<h1>👨‍🍳 COMMANDES</h1>
-<button onclick="charger()">🔄 CHARGER</button>
-<div id="liste"></div>
+    <div class="container restaurant-container">
+        <header class="restaurant-header">
+            <h1>👨‍🍳 Administration Respantrie</h1>
+            <p id="currentTime"></p>
+        </header>
 
-<script>
-const API_URL = "https://script.google.com/macros/s/TA_URL_ICI/exec";
+        <div class="stats-bar">
+            <div class="stat">
+                <span>Commandes actives</span>
+                <strong id="activeOrders">0</strong>
+            </div>
+            <div class="stat">
+                <span>En préparation</span>
+                <strong id="preparingOrders">0</strong>
+            </div>
+            <div class="stat">
+                <span>Prêts à servir</span>
+                <strong id="readyOrders">0</strong>
+            </div>
+        </div>
 
-async function charger() {
-    const r = await fetch(API_URL + "?action=getOrders");
-    const commandes = await r.json();
-    let html = "";
-    commandes.forEach(c => {
-        html += `<div style="border:1px solid black; margin:10px; padding:10px">
-            🧑 ${c.nom} - 🍔 ${c.plat} - 💰 ${c.prix} Ar
-            <button onclick="supprimer(${c.id})">✅ PRÊT - SUPPRIMER</button>
-        </div>`;
-    });
-    document.getElementById('liste').innerHTML = html || "📭 Aucune commande";
-}
+        <div class="orders-container" id="ordersContainer">
+            <p class="no-orders">Aucune commande en cours...</p>
+        </div>
+    </div>
 
-async function supprimer(id) {
-    if(confirm("Supprimer la commande ?")) {
-        await fetch(API_URL + "?action=deleteOrder&id=" + id);
-        charger();
-    }
-}
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+        let currentOrders = [];
 
-charger();
-</script>
+        async function loadOrders() {
+            try {
+                const response = await fetch(`${API_URL}?action=getOrders`);
+                if (response.ok) {
+                    const data = await response.json();
+                    currentOrders = data.orders || [];
+                    displayOrders();
+                    updateStats();
+                }
+            } catch (error) {
+                console.log('Mode démo - données simulées');
+                // Données de démonstration
+                currentOrders = [
+                    {
+                        orderNumber: 1,
+                        customerName: "Jean Dupont",
+                        items: [{name: "Poulet rôti", price: 12.50}],
+                        total: 12.50,
+                        orderTime: new Date().toISOString(),
+                        maxPrepTime: 15,
+                        status: "preparing",
+                        preparationStartTime: new Date().toISOString()
+                    }
+                ];
+                displayOrders();
+                updateStats();
+            }
+        }
+
+        function displayOrders() {
+            const container = document.getElementById('ordersContainer');
+            
+            if (!currentOrders || currentOrders.length === 0) {
+                container.innerHTML = '<p class="no-orders">Aucune commande en cours...</p>';
+                return;
+            }
+
+            container.innerHTML = currentOrders.map(order => {
+                const timeRemaining = calculateTimeRemaining(order);
+                const statusClass = getStatusClass(order.status);
+                
+                return `
+                    <div class="order-card ${statusClass}">
+                        <div class="order-header">
+                            <h3>Commande #${order.orderNumber}</h3>
+                            <span class="order-status-badge">${order.status}</span>
+                        </div>
+                        
+                        <div class="order-details">
+                            <p><strong>Client :</strong> ${order.customerName}</p>
+                            <div class="order-items">
+                                ${order.items.map(item => `
+                                    <span class="item-tag">${item.name}</span>
+                                `).join('')}
+                            </div>
+                            <p><strong>Total :</strong> ${order.total.toFixed(2)} €</p>
+                            <div class="time-info">
+                                <p><strong>Temps restant :</strong> ${timeRemaining}</p>
+                            </div>
+                        </div>
+
+                        <div class="order-actions">
+                            ${order.status === 'pending' ? `
+                                <button class="action-btn start-btn" onclick="updateOrderStatus(${order.orderNumber}, 'preparing')">
+                                    Commencer la préparation
+                                </button>
+                            ` : ''}
+                            ${order.status === 'preparing' ? `
+                                <button class="action-btn ready-btn" onclick="updateOrderStatus(${order.orderNumber}, 'ready')">
+                                    Plat prêt ! 🍽️
+                                </button>
+                            ` : ''}
+                            ${order.status === 'ready' ? `
+                                <button class="action-btn done-btn" onclick="updateOrderStatus(${order.orderNumber}, 'served')">
+                                    Servi au client
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function calculateTimeRemaining(order) {
+            if (!order.maxPrepTime) return 'N/A';
+            
+            const orderTime = new Date(order.orderTime);
+            const readyTime = new Date(orderTime.getTime() + order.maxPrepTime * 60000);
+            const now = new Date();
+            const remaining = readyTime - now;
+            
+            if (remaining <= 0) return '⌛ Temps écoulé';
+            
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function getStatusClass(status) {
+            const classes = {
+                'pending': 'status-pending',
+                'preparing': 'status-preparing',
+                'ready': 'status-ready',
+                'served': 'status-served'
+            };
+            return classes[status] || '';
+        }
+
+        async function updateOrderStatus(orderNumber, newStatus) {
+            try {
+                await fetch(`${API_URL}?action=updateStatus`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ orderNumber, status: newStatus })
+                });
+            } catch (error) {
+                console.log('Mode hors-ligne : mise à jour simulée');
+            }
+            
+            // Mise à jour locale
+            const order = currentOrders.find(o => o.orderNumber === orderNumber);
+            if (order) {
+                order.status = newStatus;
+                if (newStatus === 'preparing') {
+                    order.preparationStartTime = new Date().toISOString();
+                }
+            }
+            
+            displayOrders();
+            updateStats();
+        }
+
+        function updateStats() {
+            const active = currentOrders.filter(o => o.status !== 'served').length;
+            const preparing = currentOrders.filter(o => o.status === 'preparing').length;
+            const ready = currentOrders.filter(o => o.status === 'ready').length;
+            
+            document.getElementById('activeOrders').textContent = active;
+            document.getElementById('preparingOrders').textContent = preparing;
+            document.getElementById('readyOrders').textContent = ready;
+        }
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleString('fr-FR', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                });
+            
+            // Actualisation des temps restants toutes les minutes
+            if (now.getSeconds() % 5 === 0) {
+                displayOrders();
+            }
+        }
+
+        // Actualisation automatique toutes les 30 secondes
+        setInterval(loadOrders, 300000);
+        setInterval(updateTime, 1000);
+        
+        // Premier chargement
+        loadOrders();
+        updateTime();
+    </script>
 </body>
 </html>
