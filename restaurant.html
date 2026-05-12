@@ -2,34 +2,29 @@
 <html>
 <head><title>Restaurant</title></head>
 <body>
-<h1>COMMANDES</h1>
-<button onclick="charger()">Charger</button>
+<h1>👨‍🍳 COMMANDES</h1>
+<button onclick="charger()">🔄 CHARGER</button>
 <div id="liste"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/TA_NOUVELLE_URL_ICI/exec";
+const API_URL = "https://script.google.com/macros/s/TA_URL_ICI/exec";
 
 async function charger() {
     const r = await fetch(API_URL + "?action=getOrders");
     const commandes = await r.json();
     let html = "";
-    commandes.forEach(cmd => {
-        html += `
-            <div style="border:1px solid black; margin:10px; padding:10px">
-                <div>${cmd.nom} - ${cmd.plat} - ${cmd.prix} Ar</div>
-                <div>ID: ${cmd.id}</div>
-                <button onclick="supprimer(${cmd.id})">✅ Supprimer</button>
-            </div>
-        `;
+    commandes.forEach(c => {
+        html += `<div style="border:1px solid black; margin:10px; padding:10px">
+            🧑 ${c.nom} - 🍔 ${c.plat} - 💰 ${c.prix} Ar
+            <button onclick="supprimer(${c.id})">✅ PRÊT - SUPPRIMER</button>
+        </div>`;
     });
-    document.getElementById('liste').innerHTML = html || "Aucune commande";
+    document.getElementById('liste').innerHTML = html || "📭 Aucune commande";
 }
 
 async function supprimer(id) {
-    if(confirm("Supprimer ID " + id + " ?")) {
-        const r = await fetch(API_URL + "?action=deleteOrder&id=" + id);
-        const reponse = await r.text();
-        alert(reponse);
+    if(confirm("Supprimer la commande ?")) {
+        await fetch(API_URL + "?action=deleteOrder&id=" + id);
         charger();
     }
 }
