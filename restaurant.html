@@ -48,12 +48,19 @@
             border-radius: 5px;
             cursor: pointer;
         }
+        .derniere-maj {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>👨‍🍳 COMMANDES EN DIRECT</h1>
         <button class="refresh-btn" onclick="chargerCommandes()">🔄 Rafraîchir</button>
+        <div class="derniere-maj" id="derniereMaj"></div>
         <div id="commandes" class="commandes-list">
             <p>📭 Chargement...</p>
         </div>
@@ -92,6 +99,10 @@
                 
                 commandesActuelles = commandes;
                 
+                // Afficher l'heure de dernière mise à jour
+                const maintenant = new Date();
+                document.getElementById('derniereMaj').innerHTML = `📅 Dernière mise à jour : ${maintenant.toLocaleTimeString()}`;
+                
                 if(!commandes || commandes.length === 0) {
                     container.innerHTML = '<p>📭 Aucune commande pour le moment</p>';
                     return;
@@ -112,11 +123,12 @@
             commandes.forEach((cmd, idx) => {
                 const tempsRestant = cmd.tempsRestant;
                 const estUrgent = tempsRestant <= 0;
-                const couleurFond = estUrgent ? "#f8d7da" : "#f8f9fa";
-                
                 const mins = Math.floor(Math.max(0, tempsRestant));
                 const secs = Math.floor((Math.max(0, tempsRestant) % 1) * 60);
                 const affichageTemps = tempsRestant <= 0 ? "🔴 EN RETARD !" : `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
+                
+                // Formater l'heure de commande
+                const heureCommande = cmd.heureDebut ? new Date(cmd.heureDebut).toLocaleTimeString() : '---';
                 
                 html += `
                     <div class="commande-card ${estUrgent ? 'urgent' : ''}" data-idx="${idx}">
@@ -124,6 +136,7 @@
                         <div>📞 ${cmd.tel || 'Non spécifié'}</div>
                         <div>🍔 ${cmd.plat}</div>
                         <div>💰 ${cmd.prix} Ar</div>
+                        <div>🕐 Commandé à : ${heureCommande}</div>
                         <div>⏰ Réservation: ${cmd.heure || '---'}</div>
                         <div class="chrono" id="chrono-${idx}">${affichageTemps}</div>
                         <div style="margin-top:10px;">
@@ -152,11 +165,6 @@
                         temps -= 1/60;
                         if(temps < 0) temps = 0;
                         
-                        // Sauvegarder le temps restant
-                        if(commandesActuelles[idx]) {
-                            commandesActuelles[idx].tempsRestant = temps;
-                        }
-                        
                         const element = document.getElementById(`chrono-${idx}`);
                         if(element) {
                             if(temps <= 0) {
@@ -181,7 +189,7 @@
                     await fetch(API_URL + "?action=deleteOrder&rowIndex=" + sheetRowIndex);
                     
                     if(timers[rowIndex]) clearInterval(timers[rowIndex]);
-                    chargerCommandes();
+                    await chargerCommandes();
                     alert("✅ Commande prête - Supprimée");
                 } catch(e) {
                     console.error("Erreur:", e);
@@ -197,7 +205,7 @@
                     await fetch(API_URL + "?action=deleteOrder&rowIndex=" + sheetRowIndex);
                     
                     if(timers[rowIndex]) clearInterval(timers[rowIndex]);
-                    chargerCommandes();
+                    await chargerCommandes();
                     alert("❌ Commande annulée - Supprimée");
                 } catch(e) {
                     console.error("Erreur:", e);
@@ -206,9 +214,9 @@
             }
         }
         
-        // Charger au démarrage et toutes les 10 secondes
+        // Charger au démarrage et toutes les 5 minutes (300 000 ms)
         chargerCommandes();
-        setInterval(chargerCommandes, 10000);
+        setInterval(chargerCommandes, 300000);
     </script>
 </body>
 </html>
