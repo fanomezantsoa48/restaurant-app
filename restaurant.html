@@ -2,253 +2,44 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurant - Commandes</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .commande-card {
-            border: 1px solid #ccc;
-            margin: 10px;
-            padding: 15px;
-            border-radius: 10px;
-            transition: all 0.3s;
-            background: #f8f9fa;
-        }
-        .commande-card.urgent {
-            background: #f8d7da;
-            border-left: 5px solid #dc3545;
-        }
-        .btn-pret {
-            background: #28a745;
-            color: white;
-            padding: 8px 16px;
-            margin-right: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .btn-annuler {
-            background: #dc3545;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .chrono {
-            font-size: 20px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        .refresh-btn {
-            background: #007bff;
-            color: white;
-            padding: 8px 16px;
-            margin-bottom: 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .derniere-maj {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        .supprime {
-            display: none;
-        }
-    </style>
+    <title>Restaurant</title>
 </head>
 <body>
-    <div class="container">
-        <h1>👨‍🍳 COMMANDES EN DIRECT</h1>
-        <button class="refresh-btn" onclick="rechargerComplet()">🔄 Rafraîchir</button>
-        <div class="derniere-maj" id="derniereMaj"></div>
-        <div id="commandes" class="commandes-list">
-            <p>📭 Chargement...</p>
-        </div>
-    </div>
+    <h1>COMMANDES</h1>
+    <button onclick="charger()">Charger</button>
+    <div id="liste"></div>
+
     <script>
-        // TON URL Google Apps Script
         const API_URL = "https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6eRWZWSdkiml5gEhHYRbe5WSfT_YFO1eHa7W4jQnw5ubK35HFKKdGap/exec";
         
-        let timers = {};
-        let commandesActuelles = [];
-        
-        function calculerTempsRestant(commande) {
-            if(!commande.heureDebut) return commande.tempsPrep || 10;
+        async function charger() {
+            const response = await fetch(API_URL + "?action=getOrders");
+            const commandes = await response.json();
             
-            const debut = new Date(commande.heureDebut);
-            const maintenant = new Date();
-            const fin = new Date(debut.getTime() + (commande.tempsPrep * 60000));
-            let restant = (fin - maintenant) / 60000;
-            return restant < 0 ? 0 : restant;
-        }
-        
-        async function rechargerComplet() {
-            console.log("🔄 Rechargement complet...");
-            await chargerCommandes();
-        }
-        
-        async function chargerCommandes() {
-            const container = document.getElementById('commandes');
-            container.innerHTML = '<p>⏳ Chargement...</p>';
-            
-            try {
-                const response = await fetch(API_URL + "?action=getOrders");
-                const commandes = await response.json();
-                
-                console.log("Commandes reçues:", commandes.length);
-                
-                commandesActuelles = commandes.map(cmd => ({
-                    ...cmd,
-                    tempsRestant: calculerTempsRestant(cmd)
-                }));
-                
-                const maintenant = new Date();
-                document.getElementById('derniereMaj').innerHTML = `📅 Dernière mise à jour : ${maintenant.toLocaleTimeString()}`;
-                
-                if(!commandesActuelles || commandesActuelles.length === 0) {
-                    container.innerHTML = '<p>📭 Aucune commande pour le moment</p>';
-                    return;
-                }
-                
-                afficherCommandes();
-                demarrerTousLesChronos();
-            } catch(error) {
-                console.error("Erreur:", error);
-                container.innerHTML = '<p>❌ Erreur de connexion: ' + error.message + '</p>';
-            }
-        }
-        
-        function afficherCommandes() {
-            const container = document.getElementById('commandes');
-            let html = '';
-            
-            commandesActuelles.forEach((cmd, idx) => {
-                const tempsRestant = cmd.tempsRestant;
-                const estUrgent = tempsRestant <= 0;
-                const mins = Math.floor(Math.max(0, tempsRestant));
-                const secs = Math.floor((Math.max(0, tempsRestant) % 1) * 60);
-                const affichageTemps = tempsRestant <= 0 ? "🔴 EN RETARD !" : `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
-                
-                const heureCommande = cmd.heureDebut ? new Date(cmd.heureDebut).toLocaleTimeString() : '---';
-                
+            let html = "";
+            commandes.forEach((cmd, index) => {
                 html += `
-                    <div class="commande-card ${estUrgent ? 'urgent' : ''}" id="carte-${idx}">
-                        <div><strong>🧑 ${cmd.nom}</strong></div>
-                        <div>📞 ${cmd.tel || 'Non spécifié'}</div>
-                        <div>🍔 ${cmd.plat}</div>
-                        <div>💰 ${cmd.prix} Ar</div>
-                        <div>🕐 Commandé à : ${heureCommande}</div>
-                        <div class="chrono" id="chrono-${idx}">${affichageTemps}</div>
-                        <div style="margin-top:10px;">
-                            <button class="btn-pret" onclick="marquerPret(${idx})">✅ Prêt</button>
-                            <button class="btn-annuler" onclick="annulerCommande(${idx})">❌ Annuler</button>
-                        </div>
+                    <div style="border:1px solid black; margin:10px; padding:10px">
+                        <div>${cmd.nom} - ${cmd.plat} - ${cmd.prix} Ar</div>
+                        <div>ID: ${cmd.id}</div>
+                        <div>Heure début: ${cmd.heureDebut}</div>
+                        <button onclick="supprimer(${cmd.id})">✅ Supprimer</button>
                     </div>
                 `;
             });
-            
-            container.innerHTML = html;
+            document.getElementById('liste').innerHTML = html || "Aucune commande";
         }
         
-        function demarrerTousLesChronos() {
-            for(let id in timers) {
-                clearInterval(timers[id]);
-                delete timers[id];
-            }
-            
-            commandesActuelles.forEach((cmd, idx) => {
-                let temps = cmd.tempsRestant;
-                if(temps > 0) {
-                    timers[idx] = setInterval(() => {
-                        if(temps > 0) {
-                            temps -= 1/60;
-                            if(temps < 0) temps = 0;
-                            
-                            cmd.tempsRestant = temps;
-                            
-                            const element = document.getElementById(`chrono-${idx}`);
-                            if(element) {
-                                if(temps <= 0) {
-                                    clearInterval(timers[idx]);
-                                    element.textContent = '🔴 EN RETARD !';
-                                    const carte = document.getElementById(`carte-${idx}`);
-                                    if(carte) carte.classList.add('urgent');
-                                } else {
-                                    const mins = Math.floor(temps);
-                                    const secs = Math.floor((temps % 1) * 60);
-                                    element.textContent = `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
-                                }
-                            }
-                        }
-                    }, 1000);
-                }
-            });
-        }
-        
-        async function marquerPret(rowIndex) {
-            const commande = commandesActuelles[rowIndex];
-            if(!commande) {
-                alert("❌ Commande introuvable");
-                return;
-            }
-            
-            if(confirm(`✅ Confirmer que la commande de ${commande.nom} est prête ?`)) {
-                try {
-                    const id = commande.id;
-                    console.log("Suppression de l'ID:", id);
-                    
-                    const response = await fetch(API_URL + "?action=deleteOrder&id=" + id);
-                    const result = await response.text();
-                    console.log("Réponse:", result);
-                    
-                    if(timers[rowIndex]) clearInterval(timers[rowIndex]);
-                    
-                    // Recharger TOUTES les commandes
-                    await chargerCommandes();
-                    
-                    alert("✅ Commande supprimée avec succès !");
-                } catch(e) {
-                    console.error("Erreur:", e);
-                    alert("❌ Erreur lors de la suppression: " + e.message);
-                }
+        async function supprimer(id) {
+            if(confirm("Supprimer la commande ID " + id + " ?")) {
+                const response = await fetch(API_URL + "?action=deleteOrder&id=" + id);
+                const resultat = await response.text();
+                alert("Réponse: " + resultat);
+                charger();
             }
         }
         
-        async function annulerCommande(rowIndex) {
-            const commande = commandesActuelles[rowIndex];
-            if(!commande) {
-                alert("❌ Commande introuvable");
-                return;
-            }
-            
-            if(confirm(`❌ Annuler la commande de ${commande.nom} ?`)) {
-                try {
-                    const id = commande.id;
-                    console.log("Annulation de l'ID:", id);
-                    
-                    const response = await fetch(API_URL + "?action=deleteOrder&id=" + id);
-                    const result = await response.text();
-                    console.log("Réponse:", result);
-                    
-                    if(timers[rowIndex]) clearInterval(timers[rowIndex]);
-                    
-                    // Recharger TOUTES les commandes
-                    await chargerCommandes();
-                    
-                    alert("❌ Commande annulée avec succès !");
-                } catch(e) {
-                    console.error("Erreur:", e);
-                    alert("❌ Erreur lors de l'annulation: " + e.message);
-                }
-            }
-        }
-        
-        // Charger au démarrage
-        chargerCommandes();
+        charger();
     </script>
 </body>
 </html>
