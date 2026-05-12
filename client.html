@@ -2,92 +2,39 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Commander - FastFood</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Commander</title>
 </head>
 <body>
-    <div class="container">
-        <h1>📝 Passer commande</h1>
-        <form id="orderForm">
-            <input type="text" id="nom" placeholder="Votre nom" required>
-            <input type="tel" id="tel" placeholder="Téléphone" required>
-            <select id="plat" required>
-                <option value="">Choisissez un plat</option>
-            </select>
-            <div>💰 Prix: <span id="prix">0</span> Ar</div>
-            <input type="time" id="heure" required>
-            <button type="submit">✅ Commander</button>
-        </form>
-        <div id="message"></div>
-    </div>
+    <h1>PASSER COMMANDE</h1>
+    <input type="text" id="nom" placeholder="Nom">
+    <input type="text" id="plat" placeholder="Plat">
+    <input type="number" id="prix" placeholder="Prix">
+    <button onclick="commander()">Commander</button>
+    <div id="msg"></div>
+
     <script>
-        // TON URL Google Apps Script
         const API_URL = "https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6eRWZWSdkiml5gEhHYRbe5WSfT_YFO1eHa7W4jQnw5ubK35HFKKdGap/exec";
         
-        const plats = [
-            { nom: "Burger", prix: 8000, temps: 10 },
-            { nom: "Cheeseburger", prix: 9000, temps: 12 },
-            { nom: "Tacos", prix: 12000, temps: 15 },
-            { nom: "Frites", prix: 3000, temps: 5 },
-            { nom: "Nuggets", prix: 5000, temps: 8 }
-        ];
-        
-        const select = document.getElementById('plat');
-        plats.forEach(plat => {
-            const option = document.createElement('option');
-            option.value = plat.nom;
-            option.textContent = `${plat.nom} - ${plat.prix} Ar (${plat.temps}min)`;
-            option.dataset.prix = plat.prix;
-            option.dataset.temps = plat.temps;
-            select.appendChild(option);
-        });
-        
-        select.addEventListener('change', (e) => {
-            const prix = e.target.options[e.target.selectedIndex]?.dataset.prix || 0;
-            document.getElementById('prix').textContent = prix;
-        });
-        
-        document.getElementById('orderForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const platChoisi = plats.find(p => p.nom === document.getElementById('plat').value);
-            
+        async function commander() {
             const commande = {
                 nom: document.getElementById('nom').value,
-                tel: document.getElementById('tel').value,
                 plat: document.getElementById('plat').value,
-                prix: document.getElementById('prix').textContent,
-                heure: document.getElementById('heure').value,
-                tempsPrep: platChoisi?.temps || 10,
-                status: "en_attente",
-                timestamp: new Date().toISOString(),
-                heureDebut: new Date().toISOString()  // ← NOUVEAU
+                prix: document.getElementById('prix').value,
+                id: Date.now(),  // ← ID unique
+                heureDebut: new Date().toISOString(),
+                tempsPrep: 10
             };
             
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = '<p style="color:blue">⏳ Envoi en cours...</p>';
+            console.log("Envoi:", commande);
             
-            try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(commande)
-                });
-                
-                messageDiv.innerHTML = '<p style="color:green">✅ Commande envoyée !</p>';
-                document.getElementById('orderForm').reset();
-                document.getElementById('prix').textContent = '0';
-                
-                setTimeout(() => {
-                    messageDiv.innerHTML = '';
-                }, 4000);
-            } catch(error) {
-                console.error("Erreur:", error);
-                messageDiv.innerHTML = '<p style="color:red">❌ Erreur, réessayez</p>';
-            }
-        });
+            await fetch(API_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(commande)
+            });
+            
+            document.getElementById('msg').innerHTML = "✅ Commande envoyée ! ID: " + commande.id;
+        }
     </script>
 </body>
 </html>
