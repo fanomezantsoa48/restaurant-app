@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Commander - FastFood</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -21,15 +22,16 @@
         <div id="message"></div>
     </div>
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbx___A_REMPLACER___/exec";
-        
+        // Liste des plats
         const plats = [
             { nom: "Burger", prix: 8, temps: 10 },
             { nom: "Cheeseburger", prix: 9, temps: 12 },
             { nom: "Tacos", prix: 12, temps: 15 },
-            { nom: "Frites", prix: 3, temps: 5 }
+            { nom: "Frites", prix: 3, temps: 5 },
+            { nom: "Nuggets", prix: 5, temps: 8 }
         ];
         
+        // Remplir le select
         const select = document.getElementById('plat');
         plats.forEach(plat => {
             const option = document.createElement('option');
@@ -40,39 +42,46 @@
             select.appendChild(option);
         });
         
+        // Afficher le prix
         select.addEventListener('change', (e) => {
             const prix = e.target.options[e.target.selectedIndex]?.dataset.prix || 0;
             document.getElementById('prix').textContent = prix;
         });
         
-        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+        // Envoyer la commande (sauvegarde dans localStorage)
+        document.getElementById('orderForm').addEventListener('submit', (e) => {
             e.preventDefault();
+            
+            const platChoisi = plats.find(p => p.nom === document.getElementById('plat').value);
+            
             const commande = {
+                id: Date.now(), // Identifiant unique
                 nom: document.getElementById('nom').value,
                 tel: document.getElementById('tel').value,
                 plat: document.getElementById('plat').value,
                 prix: document.getElementById('prix').textContent,
                 heure: document.getElementById('heure').value,
-                tempsPrep: plats.find(p => p.nom === document.getElementById('plat').value)?.temps || 10,
+                tempsPrep: platChoisi?.temps || 10,
+                tempsRestant: platChoisi?.temps || 10,
                 status: "en_attente",
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toLocaleString()
             };
             
-            try {
-                const response = await fetch(API_URL + "?action=addOrder", {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(commande)
-                });
-                document.getElementById('message').innerHTML = '<p style="color:green">✅ Commande envoyée !</p>';
-                document.getElementById('orderForm').reset();
-                document.getElementById('prix').textContent = '0';
-            } catch(error) {
-                document.getElementById('message').innerHTML = '<p style="color:red">❌ Erreur, réessayez</p>';
-            }
+            // Récupérer les commandes existantes
+            let commandes = JSON.parse(localStorage.getItem('commandes') || '[]');
+            commandes.push(commande);
+            localStorage.setItem('commandes', JSON.stringify(commandes));
+            
+            // Afficher le message de succès
+            document.getElementById('message').innerHTML = '<p style="color:green">✅ Commande envoyée !</p>';
+            document.getElementById('orderForm').reset();
+            document.getElementById('prix').textContent = '0';
+            
+            // Effacer le message après 3 secondes
+            setTimeout(() => {
+                document.getElementById('message').innerHTML = '';
+            }, 3000);
         });
     </script>
 </body>
 </html>
-
