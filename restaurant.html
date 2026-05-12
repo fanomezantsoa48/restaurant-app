@@ -2,93 +2,131 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurant - Commandes</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>👨‍🍳 COMMANDES EN DIRECT</h1>
+        <h1>👨‍🍳 COMMANDES EN TEMPS RÉEL</h1>
         <div id="commandes" class="commandes-list">
-            <p>Chargement des commandes...</p>
+            <p>📭 Aucune commande pour le moment</p>
         </div>
     </div>
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbx___A_REMPLACER___/exec";
         let timers = {};
         
-        async function chargerCommandes() {
-            try {
-                const response = await fetch(API_URL + "?action=getOrders");
-                const commandes = await response.json();
-                afficherCommandes(commandes);
-            } catch(e) {
-                console.log("Attente des commandes...");
-            }
-        }
-        
-        function afficherCommandes(commandes) {
-            const container = document.getElementById('commandes');
-            if(!commandes || commandes.length === 0) {
+        function chargerCommandes() {
+            let commandes = JSON.parse(localStorage.getItem('commandes') || '[]');
+            let container = document.getElementById('commandes');
+            
+            if(commandes.length === 0) {
                 container.innerHTML = '<p>📭 Aucune commande pour le moment</p>';
                 return;
             }
             
             let html = '';
-            commandes.forEach((cmd, idx) => {
-                const tempsRestant = cmd.tempsRestant || cmd.tempsPrep;
-                const statusClass = tempsRestant <= 0 ? 'urgent' : (tempsRestant <= 2 ? 'warning' : 'normal');
+            for(let i = 0; i < commandes.length; i++) {
+                let cmd = commandes[i];
+                let tempsRestant = cmd.tempsRestant;
+                let statusClass = 'normal';
+                
+                if(tempsRestant <= 0) {
+                    statusClass = 'urgent';
+                } else if(tempsRestant <= 2) {
+                    statusClass = 'warning';
+                }
+                
+                let chronoText = '';
+                if(tempsRestant > 0) {
+                    const mins = Math.floor(tempsRestant);
+                    const secs = Math.floor((tempsRestant % 1) * 60);
+                    chronoText = `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
+                } else {
+                    chronoText = '🔴 EN RETARD !';
+                }
+                
                 html += `
-                    <div class="commande-card ${statusClass}" data-id="${idx}">
-                        <div class="client">🧑 ${cmd.nom || cmd.client}</div>
-                        <div class="plat">🍔 ${cmd.plat}</div>
-                        <div class="prix💰">${cmd.prix || 8}€</div>
-                        <div class="chrono" id="chrono-${idx}">⏱️ ${Math.floor(tempsRestant)}:${Math.floor((tempsRestant%1)*60)}</div>
+                    <div class="commande-card ${statusClass}" data-id="${cmd.id}">
+                        <div><strong>🧑 ${cmd.nom}</strong></div>
+                        <div>📞 ${cmd.tel}</div>
+                        <div>🍔 ${cmd.plat}</div>
+                        <div>💰 ${cmd.prix}€</div>
+                        <div>⏰ Réservation: ${cmd.heure}</div>
+                        <div class="chrono" id="chrono-${cmd.id}">${chronoText}</div>
                         <div class="actions">
-                            <button onclick="marquerPret(${idx})">✅ Prêt</button>
-                            <button onclick="annulerCommande(${idx})">❌ Annuler</button>
+                            <button onclick="marquerPret(${i})">✅ Prêt</button>
+                            <button onclick="annulerCommande(${i})">❌ Annuler</button>
                         </div>
                     </div>
                 `;
-            });
+            }
             container.innerHTML = html;
             
             // Démarrer les chronos
-            commandes.forEach((cmd, idx) => {
-                if(!timers[idx] && cmd.status !== 'pret') {
-                    demarrerChrono(idx, cmd.tempsPrep || 10);
+            for(let i = 0; i < commandes.length; i++) {
+                let cmd = commandes[i];
+                if(cmd.status !== 'pret' && cmd.tempsRestant > 0 && !timers[cmd.id]) {
+                    demarrerChrono(i, cmd.id, cmd.tempsRestant);
                 }
-            });
+            }
         }
         
-        function demarrerChrono(idx, duree) {
+        function demarrerChrono(index, id, duree) {
             let temps = duree;
-            timers[idx] = setInterval(() => {
+            timers[id] = setInterval(() => {
                 temps -= 1/60;
-                const element = document.getElementById(`chrono-${idx}`);
+                if(temps < 0) temps = 0;
+                
+                let commandes = JSON.parse(localStorage.getItem('commandes') || '[]');
+                if(commandes[index]) {
+                    commandes[index].tempsRestant = temps;
+                    localStorage.setItem('commandes', JSON.stringify(commandes));
+                }
+                
+                const element = document.getElementById(`chrono-${id}`);
                 if(element) {
-                    const mins = Math.floor(Math.max(0, temps));
-                    const secs = Math.floor((temps % 1) * 60);
-                    element.textContent = `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
                     if(temps <= 0) {
-                        clearInterval(timers[idx]);
-                        element.textContent = "🔴 EN RETARD !";
+                        clearInterval(timers[id]);
+                        element.textContent = '🔴 EN RETARD !';
                         element.parentElement.classList.add('urgent');
+                    } else {
+                        const mins = Math.floor(temps);
+                        const secs = Math.floor((temps % 1) * 60);
+                        element.textContent = `⏱️ ${mins}:${secs < 10 ? '0'+secs : secs}`;
                     }
                 }
             }, 1000);
         }
         
-        function marquerPret(idx) {
-            if(timers[idx]) clearInterval(timers[idx]);
-            alert("Commande marquée comme prête !");
+        function marquerPret(index) {
+            let commandes = JSON.parse(localStorage.getItem('commandes') || '[]');
+            if(commandes[index]) {
+                commandes[index].status = 'pret';
+                if(timers[commandes[index].id]) {
+                    clearInterval(timers[commandes[index].id]);
+                }
+                localStorage.setItem('commandes', JSON.stringify(commandes));
+                chargerCommandes();
+                alert("✅ Commande prête !");
+            }
         }
         
-        function annulerCommande(idx) {
-            if(timers[idx]) clearInterval(timers[idx]);
-            alert("Commande annulée");
+        function annulerCommande(index) {
+            let commandes = JSON.parse(localStorage.getItem('commandes') || '[]');
+            if(commandes[index]) {
+                if(timers[commandes[index].id]) {
+                    clearInterval(timers[commandes[index].id]);
+                }
+                commandes.splice(index, 1);
+                localStorage.setItem('commandes', JSON.stringify(commandes));
+                chargerCommandes();
+                alert("❌ Commande annulée");
+            }
         }
         
-        setInterval(chargerCommandes, 3000);
+        // Rafraîchir toutes les secondes
+        setInterval(chargerCommandes, 1000);
         chargerCommandes();
     </script>
 </body>
