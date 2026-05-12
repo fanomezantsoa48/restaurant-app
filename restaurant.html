@@ -8,27 +8,39 @@
 </head>
 <body>
     <div class="container">
-        <h1>👨‍🍳 COMMANDES EN TEMPS RÉEL</h1>
+        <h1>👨‍🍳 COMMANDES EN DIRECT</h1>
         <div id="commandes" class="commandes-list">
-            <p>📭 Aucune commande pour le moment</p>
+            <p>Chargement des commandes...</p>
         </div>
     </div>
     <script>
+        // TON URL Google Apps Script
+        const API_URL = "https://script.google.com/macros/s/AKfycbyEfZx8A7C_b6eRWZWSdkiml5gEhHYRbe5WSfT_YFO1eHa7W4jQnw5ubK35HFKKdGap/exec";
+        
         let timers = {};
         
-        function chargerCommandes() {
-            let commandes = JSON.parse(localStorage.getItem('commandes') || '[]');
-            let container = document.getElementById('commandes');
-            
-            if(commandes.length === 0) {
+        async function chargerCommandes() {
+            try {
+                const response = await fetch(API_URL + "?action=getOrders");
+                const commandes = await response.json();
+                afficherCommandes(commandes);
+            } catch(e) {
+                console.log("Erreur de chargement:", e);
+                document.getElementById('commandes').innerHTML = '<p>🔌 Connexion en cours...</p>';
+            }
+        }
+        
+        function afficherCommandes(commandes) {
+            const container = document.getElementById('commandes');
+            if(!commandes || commandes.length === 0) {
                 container.innerHTML = '<p>📭 Aucune commande pour le moment</p>';
                 return;
             }
             
             let html = '';
-            for(let i = 0; i < commandes.length; i++) {
-                let cmd = commandes[i];
-                let tempsRestant = cmd.tempsRestant;
+            commandes.forEach((cmd, idx) => {
+                // Gérer le temps restant (si pas défini, prendre tempsPrep)
+                let tempsRestant = cmd.tempsRestant !== undefined ? cmd.tempsRestant : cmd.tempsPrep;
                 let statusClass = 'normal';
                 
                 if(tempsRestant <= 0) {
@@ -37,6 +49,7 @@
                     statusClass = 'warning';
                 }
                 
+                // Formater l'affichage du temps
                 let chronoText = '';
                 if(tempsRestant > 0) {
                     const mins = Math.floor(tempsRestant);
@@ -47,47 +60,41 @@
                 }
                 
                 html += `
-                    <div class="commande-card ${statusClass}" data-id="${cmd.id}">
+                    <div class="commande-card ${statusClass}" data-id="${cmd.id || idx}">
                         <div><strong>🧑 ${cmd.nom}</strong></div>
-                        <div>📞 ${cmd.tel}</div>
+                        <div>📞 ${cmd.tel || 'Non spécifié'}</div>
                         <div>🍔 ${cmd.plat}</div>
                         <div>💰 ${cmd.prix}€</div>
-                        <div>⏰ Réservation: ${cmd.heure}</div>
-                        <div class="chrono" id="chrono-${cmd.id}">${chronoText}</div>
+                        <div>⏰ Réservation: ${cmd.heure || '---'}</div>
+                        <div class="chrono" id="chrono-${idx}">${chronoText}</div>
                         <div class="actions">
-                            <button onclick="marquerPret(${i})">✅ Prêt</button>
-                            <button onclick="annulerCommande(${i})">❌ Annuler</button>
+                            <button onclick="marquerPret(${idx})">✅ Prêt</button>
+                            <button onclick="annulerCommande(${idx})">❌ Annuler</button>
                         </div>
                     </div>
                 `;
-            }
+            });
             container.innerHTML = html;
             
             // Démarrer les chronos
-            for(let i = 0; i < commandes.length; i++) {
-                let cmd = commandes[i];
-                if(cmd.status !== 'pret' && cmd.tempsRestant > 0 && !timers[cmd.id]) {
-                    demarrerChrono(i, cmd.id, cmd.tempsRestant);
+            commandes.forEach((cmd, idx) => {
+                let tempsRestant = cmd.tempsRestant !== undefined ? cmd.tempsRestant : cmd.tempsPrep;
+                if(tempsRestant > 0 && !timers[idx]) {
+                    demarrerChrono(idx, tempsRestant, cmd);
                 }
-            }
+            });
         }
         
-        function demarrerChrono(index, id, duree) {
+        function demarrerChrono(idx, duree, commande) {
             let temps = duree;
-            timers[id] = setInterval(() => {
+            timers[idx] = setInterval(() => {
                 temps -= 1/60;
                 if(temps < 0) temps = 0;
                 
-                let commandes = JSON.parse(localStorage.getItem('commandes') || '[]');
-                if(commandes[index]) {
-                    commandes[index].tempsRestant = temps;
-                    localStorage.setItem('commandes', JSON.stringify(commandes));
-                }
-                
-                const element = document.getElementById(`chrono-${id}`);
+                const element = document.getElementById(`chrono-${idx}`);
                 if(element) {
                     if(temps <= 0) {
-                        clearInterval(timers[id]);
+                        clearInterval(timers[idx]);
                         element.textContent = '🔴 EN RETARD !';
                         element.parentElement.classList.add('urgent');
                     } else {
@@ -99,34 +106,20 @@
             }, 1000);
         }
         
-        function marquerPret(index) {
-            let commandes = JSON.parse(localStorage.getItem('commandes') || '[]');
-            if(commandes[index]) {
-                commandes[index].status = 'pret';
-                if(timers[commandes[index].id]) {
-                    clearInterval(timers[commandes[index].id]);
-                }
-                localStorage.setItem('commandes', JSON.stringify(commandes));
-                chargerCommandes();
-                alert("✅ Commande prête !");
-            }
+        function marquerPret(idx) {
+            if(timers[idx]) clearInterval(timers[idx]);
+            alert("✅ Commande marquée comme prête !");
+            chargerCommandes(); // Rafraîchir
         }
         
-        function annulerCommande(index) {
-            let commandes = JSON.parse(localStorage.getItem('commandes') || '[]');
-            if(commandes[index]) {
-                if(timers[commandes[index].id]) {
-                    clearInterval(timers[commandes[index].id]);
-                }
-                commandes.splice(index, 1);
-                localStorage.setItem('commandes', JSON.stringify(commandes));
-                chargerCommandes();
-                alert("❌ Commande annulée");
-            }
+        function annulerCommande(idx) {
+            if(timers[idx]) clearInterval(timers[idx]);
+            alert("❌ Commande annulée");
+            chargerCommandes(); // Rafraîchir
         }
         
-        // Rafraîchir toutes les secondes
-        setInterval(chargerCommandes, 1000);
+        // Rafraîchir toutes les 3 secondes
+        setInterval(chargerCommandes, 3000);
         chargerCommandes();
     </script>
 </body>
