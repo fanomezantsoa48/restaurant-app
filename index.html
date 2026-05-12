@@ -3,22 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastFood - Commander</title>
+    <title>Respantrie - Commande en ligne</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        /* Styles spécifiques à la page d'accueil */
+        .index-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            flex-direction: column;
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .welcome-section h1 {
+            font-size: 3em;
+            color: #e67e22;
+            margin-bottom: 15px;
+        }
+
+        .welcome-section p {
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+
+        .role-selection {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            max-width: 700px;
+            width: 100%;
+        }
+
+        .role-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            border: 3px solid transparent;
+        }
+
+        .role-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .client-card:hover {
+            border-color: #e67e22;
+        }
+
+        .restaurant-card:hover {
+            border-color: #2c3e50;
+        }
+
+        .role-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .role-card h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .client-card h2 {
+            color: #e67e22;
+        }
+
+        .restaurant-card h2 {
+            color: #2c3e50;
+        }
+
+        .role-card p {
+            color: #7f8c8d;
+            font-size: 1em;
+            line-height: 1.5;
+        }
+
+        .cta-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .client-card .cta-button {
+            background: #e67e22;
+            color: white;
+        }
+
+        .restaurant-card .cta-button {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .role-card:hover .cta-button {
+            filter: brightness(1.1);
+        }
+
+        @media (max-width: 600px) {
+            .role-selection {
+                grid-template-columns: 1fr;
+            }
+            
+            .welcome-section h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🍔 FASTFOOD</h1>
-        <div class="qr-box">
-            <h2>Scannez pour commander</h2>
-            <div id="qrcode"></div>
+    <div class="container index-container">
+        <div class="welcome-section">
+            <h1>🍽️ Respantrie</h1>
+            <p>La commande de repas simplifiée pour les restaurants</p>
         </div>
-        <p><a href="client.html">📱 Accès client</a> | <a href="restaurant.html">👨‍🍳 Accès restaurant</a></p>
+
+        <div class="role-selection">
+            <a href="client.html" class="role-card client-card">
+                <div class="role-icon">🍴</div>
+                <h2>Client</h2>
+                <p>Commandez votre repas en quelques clics et suivez sa préparation en temps réel</p>
+                <span class="cta-button">Commander un plat</span>
+            </a>
+
+            <a href="restaurant.html" class="role-card restaurant-card">
+                <div class="role-icon">👨‍🍳</div>
+                <h2>Restaurant</h2>
+                <p>Gérez les commandes, suivez les préparations et informez vos clients</p>
+                <span class="cta-button">Accéder aux commandes</span>
+            </a>
+        </div>
     </div>
-    <script>
-        const url = window.location.origin + window.location.pathname.replace("index.html", "client.html");
-        new QRCode(document.getElementById("qrcode"), { text: url, width: 200, height: 200 });
-    </script>
 </body>
 </html>
