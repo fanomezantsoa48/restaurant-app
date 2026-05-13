@@ -15,6 +15,14 @@
         
         .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
         
+        .btn-refresh {
+            display: block; margin: 0 auto 20px; padding: 12px 30px;
+            background: #3498db; color: white; border: none; border-radius: 10px;
+            font-size: 1em; cursor: pointer; font-weight: bold;
+        }
+        
+        .btn-refresh:hover { background: #2980b9; }
+        
         .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
         
         .stat-card { background: white; padding: 25px; border-radius: 15px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
@@ -53,6 +61,8 @@
         
         .back-link { display: inline-block; margin-bottom: 20px; color: #2c3e50; text-decoration: none; font-weight: bold; }
         
+        .loading { text-align: center; padding: 40px; color: #999; }
+        
         @media (max-width: 600px) { .stats { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -64,6 +74,8 @@
     
     <div class="container">
         <a href="index.html" class="back-link">← Retour</a>
+        
+        <button class="btn-refresh" onclick="loadOrders()">🔄 Actualiser les commandes</button>
         
         <div class="stats">
             <div class="stat-card stat-active">
@@ -81,18 +93,49 @@
         </div>
         
         <div id="ordersContainer">
-            <p class="no-orders">🍳 Aucune commande en attente</p>
+            <p class="loading">⏳ Chargement des commandes...</p>
         </div>
     </div>
 
     <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyB0ifkEhaJL_nNh35EsEqX-mn72s6I94MfYwVmklHFGIte_8mhBEqFj_RMkPLZ9Fms/exec';
+        
         let orders = [];
+        
+        async function loadOrders() {
+            document.getElementById('ordersContainer').innerHTML = '<p class="loading">⏳ Chargement des commandes...</p>';
+            
+            try {
+                const response = await fetch(`${API_URL}?action=getOrders`);
+                const data = await response.json();
+                
+                if (data.orders && data.orders.length > 0) {
+                    orders = data.orders.map(order => ({
+                        id: order.orderNumber,
+                        customer: order.customerName,
+                        items: order.items.map(i => i.name || i),
+                        total: order.total || 0,
+                        time: order.maxPrepTime || 0,
+                        status: order.status || 'pending'
+                    }));
+                    displayOrders();
+                } else {
+                    orders = [];
+                    displayOrders();
+                }
+            } catch(error) {
+                console.log('Erreur:', error);
+                document.getElementById('ordersContainer').innerHTML = 
+                    '<p class="no-orders">❌ Impossible de charger les commandes<br><small>Vérifiez votre connexion</small></p>';
+            }
+        }
         
         function displayOrders() {
             const container = document.getElementById('ordersContainer');
             
             if (orders.length === 0) {
-                container.innerHTML = '<p class="no-orders">🍳 Aucune commande en attente</p>';
+                container.innerHTML = '<p class="no-orders">🍳 Aucune commande en attente<br><small>Les nouvelles commandes apparaîtront ici</small></p>';
+                updateStats();
                 return;
             }
             
@@ -114,13 +157,13 @@
                     <div class="order-card ${orderClass}">
                         <div class="order-header">
                             <h3>Commande #${order.id}</h3>
-                            <span class="badge ${statusBadge}">${statusLabels[order.status]}</span>
+                            <span class="badge ${statusBadge}">${statusLabels[order.status] || order.status}</span>
                         </div>
                         <p><strong>👤 Client :</strong> ${order.customer}</p>
                         <div class="order-items">
                             ${order.items.map(item => `<span class="item-tag">${item}</span>`).join('')}
                         </div>
-                        <p><strong>💰 Total :</strong> ${order.total.toFixed(2)} €</p>
+                        <p><strong>💰 Total :</strong> ${typeof order.total === 'number' ? order.total.toFixed(2) : order.total} €</p>
                         ${buttons}
                     </div>
                 `;
@@ -129,16 +172,25 @@
             updateStats();
         }
         
-        function changeStatus(id, newStatus) {
-            const order = orders.find(o => o.id === id);
-            if (order) {
-                if (newStatus === 'served') {
-                    orders = orders.filter(o => o.id !== id);
-                } else {
-                    order.status = newStatus;
-                }
-                displayOrders();
+        async function changeStatus(id, newStatus) {
+            try {
+                await fetch(`${API_URL}?action=updateStatus`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ orderNumber: id, status: newStatus })
+                });
+            } catch(error) {
+                console.log('MAJ locale uniquement');
             }
+            
+            if (newStatus === 'served') {
+                orders = orders.filter(o => o.id !== id);
+            } else {
+                const order = orders.find(o => o.id === id);
+                if (order) order.status = newStatus;
+            }
+            
+            displayOrders();
         }
         
         function updateStats() {
@@ -156,8 +208,12 @@
                 });
         }
         
+        // Charge les commandes toutes les 30 secondes
+        setInterval(loadOrders, 30000);
         setInterval(updateTime, 1000);
-        displayOrders();
+        
+        // Premier chargement
+        loadOrders();
         updateTime();
     </script>
 </body>
