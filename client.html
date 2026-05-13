@@ -219,11 +219,13 @@
             
             // Envoi à Google Sheets
             try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(orderData)
-                });
+const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'text/plain'
+    },
+    body: JSON.stringify(orderData)
+});
                 const result = await response.json();
                 if (result.success) {
                     document.getElementById('orderNum').textContent = result.orderNumber;
