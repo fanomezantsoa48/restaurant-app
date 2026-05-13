@@ -3,147 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Respantrie - Commande en ligne</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Respantrie - Commandez vos repas</title>
     <style>
-        /* Styles spécifiques à la page d'accueil */
-        .index-container {
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            min-height: 90vh;
-            flex-direction: column;
+            justify-content: center;
         }
-
-        .welcome-section {
+        
+        .container {
             text-align: center;
+            padding: 20px;
+        }
+        
+        .logo {
+            font-size: 5em;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        h1 {
+            color: white;
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.3em;
             margin-bottom: 50px;
         }
-
-        .welcome-section h1 {
-            font-size: 3em;
-            color: #e67e22;
-            margin-bottom: 15px;
-        }
-
-        .welcome-section p {
-            color: #7f8c8d;
-            font-size: 1.2em;
-        }
-
-        .role-selection {
+        
+        .cards {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
-            max-width: 700px;
-            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
         }
-
-        .role-card {
+        
+        .card {
             background: white;
             border-radius: 20px;
-            padding: 40px 30px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            cursor: pointer;
+            padding: 40px;
             text-decoration: none;
-            color: inherit;
-            border: 3px solid transparent;
+            color: #333;
+            transition: all 0.3s;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
-
-        .role-card:hover {
+        
+        .card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-
-        .client-card:hover {
-            border-color: #e67e22;
-        }
-
-        .restaurant-card:hover {
-            border-color: #2c3e50;
-        }
-
-        .role-icon {
+        
+        .card-icon {
             font-size: 4em;
             margin-bottom: 20px;
         }
-
-        .role-card h2 {
+        
+        .card h2 {
             font-size: 1.8em;
             margin-bottom: 15px;
         }
-
-        .client-card h2 {
-            color: #e67e22;
+        
+        .card-client h2 { color: #e67e22; }
+        .card-restaurant h2 { color: #2c3e50; }
+        
+        .card p {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
         }
-
-        .restaurant-card h2 {
-            color: #2c3e50;
-        }
-
-        .role-card p {
-            color: #7f8c8d;
-            font-size: 1em;
-            line-height: 1.5;
-        }
-
-        .cta-button {
+        
+        .btn {
             display: inline-block;
-            margin-top: 20px;
-            padding: 12px 30px;
-            border-radius: 30px;
-            font-size: 1em;
+            padding: 15px 40px;
+            border-radius: 50px;
+            color: white;
             font-weight: bold;
-            transition: background 0.3s;
+            font-size: 1.1em;
+            transition: all 0.3s;
         }
-
-        .client-card .cta-button {
-            background: #e67e22;
-            color: white;
-        }
-
-        .restaurant-card .cta-button {
-            background: #2c3e50;
-            color: white;
-        }
-
-        .role-card:hover .cta-button {
-            filter: brightness(1.1);
-        }
-
-        @media (max-width: 600px) {
-            .role-selection {
-                grid-template-columns: 1fr;
-            }
-            
-            .welcome-section h1 {
-                font-size: 2em;
-            }
+        
+        .btn-client { background: #e67e22; }
+        .btn-restaurant { background: #2c3e50; }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
         }
     </style>
 </head>
 <body>
-    <div class="container index-container">
-        <div class="welcome-section">
-            <h1>🍽️ Respantrie</h1>
-            <p>La commande de repas simplifiée pour les restaurants</p>
-        </div>
-
-        <div class="role-selection">
-            <a href="client.html" class="role-card client-card">
-                <div class="role-icon">🍴</div>
-                <h2>Client</h2>
-                <p>Commandez votre repas en quelques clics et suivez sa préparation en temps réel</p>
-                <span class="cta-button">Commander un plat</span>
+    <div class="container">
+        <div class="logo">🍽️</div>
+        <h1>Respantrie</h1>
+        <p class="subtitle">La commande de repas simplifiée</p>
+        
+        <div class="cards">
+            <a href="client.html" class="card card-client">
+                <div class="card-icon">🛒</div>
+                <h2>Je commande</h2>
+                <p>Parcourez le menu et passez votre commande en quelques clics</p>
+                <span class="btn btn-client">Voir le menu</span>
             </a>
-
-            <a href="restaurant.html" class="role-card restaurant-card">
-                <div class="role-icon">👨‍🍳</div>
+            
+            <a href="restaurant.html" class="card card-restaurant">
+                <div class="card-icon">👨‍🍳</div>
                 <h2>Restaurant</h2>
-                <p>Gérez les commandes, suivez les préparations et informez vos clients</p>
-                <span class="cta-button">Accéder aux commandes</span>
+                <p>Gérez les commandes en temps réel et suivez les préparations</p>
+                <span class="btn btn-restaurant">Accéder</span>
             </a>
         </div>
     </div>
