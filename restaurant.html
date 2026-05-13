@@ -39,6 +39,7 @@
         .no-orders { text-align: center; padding: 60px; color: #999; font-size: 1.2em; }
         .back-link { display: inline-block; margin-bottom: 20px; color: #2c3e50; text-decoration: none; font-weight: bold; }
         .loading { text-align: center; padding: 40px; color: #999; }
+        .error-message { text-align: center; padding: 40px; color: #e74c3c; background: #ffeaea; border-radius: 15px; margin: 20px; }
         @media (max-width: 600px) { .stats { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -74,42 +75,61 @@
     </div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/library/d/1I7W5HcjTRFTTRAWKr_gssGDrBWJ3H2TvoYeH27CWMykGBX0bW07lXb1v/7';
+        // ⚠️ IMPORTANT: Remplacez cette URL par votre URL de déploiement Web App
+        // Allez dans Google Apps Script → Déployer → Nouveau déploiement → Application Web
+        // Copiez l'URL et collez-la ici
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzgEXosIwW9EM_v7iSK3ELlpe6pOaCJu29g79-OuH3LyqBH6AeZRzxzAsix1eCQ_ImF/exec';
+        
         let orders = [];
         
         async function loadOrders() {
-            document.getElementById('ordersContainer').innerHTML = '<p class="loading">⏳ Chargement des commandes...</p>';
+            const container = document.getElementById('ordersContainer');
+            container.innerHTML = '<p class="loading">⏳ Chargement des commandes...</p>';
             
             try {
-                // Utilise JSONP pour contourner CORS
-                const callbackName = 'callback_' + Date.now();
-                
-                window[callbackName] = function(data) {
-                    if (data.orders && data.orders.length > 0) {
-                        orders = data.orders.map(order => ({
-                            id: order.orderNumber,
-                            customer: order.customerName,
-                            items: order.items.map(i => i.name || i),
-                            total: order.total || 0,
-                            status: order.status || 'pending'
-                        }));
-                        displayOrders();
-                    } else {
-                        orders = [];
-                        displayOrders();
+                // Utiliser fetch moderne au lieu de JSONP
+                const response = await fetch(API_URL + '?action=getOrders&_=' + Date.now(), {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
                     }
-                    document.getElementById(callbackName + '_script').remove();
-                    delete window[callbackName];
-                };
+                });
                 
-                const script = document.createElement('script');
-                script.id = callbackName + '_script';
-                script.src = API_URL + '?action=getOrders&callback=' + callbackName;
-                document.body.appendChild(script);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Données reçues:', data);
+                
+                if (data.orders && Array.isArray(data.orders) && data.orders.length > 0) {
+                    orders = data.orders.map(order => ({
+                        id: order.orderNumber,
+                        customer: order.customerName,
+                        items: order.items.map(i => i.name || i),
+                        total: order.total || 0,
+                        status: order.status || 'pending'
+                    }));
+                } else {
+                    orders = [];
+                }
+                displayOrders();
                 
             } catch(error) {
-                console.log('Erreur:', error);
-                document.getElementById('ordersContainer').innerHTML = '<p class="no-orders">❌ Erreur de connexion</p>';
+                console.error('Erreur détaillée:', error);
+                container.innerHTML = `
+                    <div class="error-message">
+                        ❌ Erreur de connexion<br>
+                        <small>${error.message}</small><br><br>
+                        <strong>Vérifiez que :</strong><br>
+                        1. Le script Google Apps Script est déployé en "Application Web"<br>
+                        2. L'accès est réglé sur "Tout le monde"<br>
+                        3. L'URL dans API_URL est correcte<br>
+                        4. Vous avez exécuté la fonction doGet() une fois dans l'éditeur
+                    </div>
+                `;
+                updateStats();
             }
         }
         
@@ -142,17 +162,28 @@
                             <h3>Commande #${order.id}</h3>
                             <span class="badge ${statusBadge}">${statusLabels[order.status] || order.status}</span>
                         </div>
-                        <p><strong>👤 Client :</strong> ${order.customer}</p>
+                        <p><strong>👤 Client :</strong> ${escapeHtml(order.customer)}</p>
                         <div class="order-items">
-                            ${order.items.map(item => `<span class="item-tag">${item}</span>`).join('')}
+                            ${order.items.map(item => `<span class="item-tag">${escapeHtml(item)}</span>`).join('')}
                         </div>
-                        <p><strong>💰 Total :</strong> ${typeof order.total === 'number' ? order.total.toFixed(2) : order.total} €</p>
+                        <p><strong>💰 Total :</strong> ${typeof order.total === 'number' ? order.total.toFixed(2) : parseFloat(order.total).toFixed(2)} €</p>
                         ${buttons}
                     </div>
                 `;
             }).join('');
             
             updateStats();
+        }
+        
+        // Fonction utilitaire pour éviter les injections XSS
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
         }
         
         function changeStatus(id, newStatus) {
@@ -163,6 +194,25 @@
                 if (order) order.status = newStatus;
             }
             displayOrders();
+            
+            // Optionnel: Envoyer la mise à jour au serveur
+            updateOrderStatusOnServer(id, newStatus);
+        }
+        
+        async function updateOrderStatusOnServer(orderId, newStatus) {
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'updateStatus',
+                        orderId: orderId,
+                        status: newStatus
+                    })
+                });
+            } catch(error) {
+                console.error('Erreur mise à jour status:', error);
+            }
         }
         
         function updateStats() {
@@ -180,9 +230,11 @@
                 });
         }
         
-        setInterval(loadOrders, 30000);
+        // Rafraîchir toutes les 15 secondes (au lieu de 30)
+        setInterval(loadOrders, 15000);
         setInterval(updateTime, 1000);
         
+        // Chargement initial
         loadOrders();
         updateTime();
     </script>
