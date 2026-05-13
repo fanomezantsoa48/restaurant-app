@@ -14,87 +14,106 @@
         
         .header {
             background: white;
-            padding: 20px;
+            padding: 15px 20px;
             text-align: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             position: sticky;
             top: 0;
             z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .header h1 {
             color: #e67e22;
-            font-size: 2em;
+            font-size: 1.5em;
+        }
+        
+        .cart-badge {
+            background: #e74c3c;
+            color: white;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: transform 0.2s;
+        }
+        
+        .cart-badge:hover {
+            transform: scale(1.05);
         }
         
         .container {
             max-width: 1200px;
-            margin: 30px auto;
+            margin: 20px auto;
             padding: 0 20px;
+            padding-bottom: 100px;
         }
         
         .menu-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
         
         .menu-card {
             background: white;
-            border-radius: 15px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
             transition: transform 0.3s;
         }
         
         .menu-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-3px);
         }
         
         .menu-card img {
             width: 100%;
-            height: 200px;
+            height: 180px;
             object-fit: cover;
         }
         
         .menu-card-body {
-            padding: 20px;
+            padding: 15px;
         }
         
         .menu-card h3 {
-            font-size: 1.3em;
-            margin-bottom: 8px;
+            font-size: 1.1em;
+            margin-bottom: 5px;
             color: #333;
         }
         
         .menu-card .desc {
             color: #666;
-            font-size: 0.9em;
-            margin-bottom: 12px;
+            font-size: 0.85em;
+            margin-bottom: 8px;
         }
         
         .menu-card .time {
             color: #e67e22;
-            font-size: 0.9em;
-            margin-bottom: 8px;
+            font-size: 0.85em;
+            margin-bottom: 5px;
         }
         
         .menu-card .price {
-            font-size: 1.5em;
+            font-size: 1.3em;
             font-weight: bold;
             color: #27ae60;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         
         .btn-add {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             background: #e67e22;
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 1em;
+            border-radius: 8px;
+            font-size: 0.95em;
             cursor: pointer;
             transition: background 0.3s;
         }
@@ -103,101 +122,115 @@
             background: #d35400;
         }
         
-        .cart-section {
+        /* Panier MODAL - beaucoup plus compact */
+        .cart-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+        }
+        
+        .cart-panel {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            position: sticky;
-            bottom: 20px;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            z-index: 201;
+            max-height: 70vh;
+            overflow-y: auto;
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s;
         }
         
-        .cart-title {
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .cart-panel.active,
+        .cart-overlay.active {
+            display: block;
+        }
+        
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .cart-header h3 {
+            font-size: 1.2em;
+        }
+        
+        .btn-close {
+            background: none;
+            border: none;
             font-size: 1.5em;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .cart-count {
-            background: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9em;
+            cursor: pointer;
+            color: #999;
         }
         
         .cart-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #eee;
-        }
-        
-        .cart-item:last-child {
-            border-bottom: none;
+            font-size: 0.9em;
         }
         
         .btn-remove {
             background: #e74c3c;
             color: white;
             border: none;
-            width: 28px;
-            height: 28px;
+            width: 25px;
+            height: 25px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 1.1em;
+            font-size: 0.9em;
         }
         
         .cart-total {
-            margin-top: 20px;
-            padding-top: 15px;
+            margin-top: 15px;
+            padding-top: 10px;
             border-top: 2px solid #333;
-            font-size: 1.2em;
             font-weight: bold;
+            font-size: 1.1em;
         }
         
         .form-group {
-            margin-top: 20px;
+            margin-top: 15px;
         }
         
         .form-group input {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 1em;
-            margin-bottom: 10px;
-            transition: border 0.3s;
-        }
-        
-        .form-group input:focus {
-            outline: none;
-            border-color: #e67e22;
+            border-radius: 8px;
+            font-size: 0.95em;
+            margin-bottom: 8px;
         }
         
         .btn-order {
             width: 100%;
-            padding: 15px;
+            padding: 14px;
             background: #27ae60;
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 1.2em;
+            font-size: 1.1em;
             font-weight: bold;
             cursor: pointer;
-            margin-top: 15px;
-            transition: background 0.3s;
-        }
-        
-        .btn-order:hover {
-            background: #219a52;
+            margin-top: 10px;
         }
         
         .btn-order:disabled {
@@ -208,77 +241,71 @@
         .success-message {
             display: none;
             text-align: center;
-            padding: 30px;
+            padding: 20px;
             background: #d5f5e3;
-            border-radius: 15px;
-            margin-top: 20px;
-            animation: slideUp 0.5s;
-        }
-        
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            border-radius: 12px;
+            margin-top: 15px;
         }
         
         .success-message .emoji {
-            font-size: 4em;
-        }
-        
-        .success-message h3 {
-            color: #27ae60;
-            margin: 15px 0;
+            font-size: 2.5em;
         }
         
         .empty-cart {
             text-align: center;
             color: #999;
-            padding: 20px;
+            padding: 15px;
+            font-size: 0.9em;
         }
         
         .back-link {
             display: inline-block;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             color: #e67e22;
             text-decoration: none;
             font-weight: bold;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
     <div class="header">
+        <a href="index.html" style="color:#e67e22; text-decoration:none; font-size:1.2em;">←</a>
         <h1>🍽️ Respantrie</h1>
+        <span class="cart-badge" id="cartBadge" onclick="toggleCart()">🛒 <span id="cartCount">0</span></span>
     </div>
     
     <div class="container">
-        <a href="index.html" class="back-link">← Retour</a>
-        
-        <h2 style="margin-bottom: 20px; color: #333;">Notre Menu</h2>
+        <h2 style="margin-bottom: 15px; color: #333;">Notre Menu</h2>
         
         <div class="menu-grid" id="menuGrid"></div>
+    </div>
+    
+    <!-- Overlay sombre -->
+    <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+    
+    <!-- Panier coulissant -->
+    <div class="cart-panel" id="cartPanel">
+        <div class="cart-header">
+            <h3>🛒 Votre commande</h3>
+            <button class="btn-close" onclick="toggleCart()">✕</button>
+        </div>
+        <div id="cartItems">
+            <p class="empty-cart">Sélectionnez des plats</p>
+        </div>
+        <div class="cart-total" id="cartTotal" style="display: none;"></div>
         
-        <div class="cart-section" id="cartSection">
-            <div class="cart-title">
-                🛒 Votre commande
-                <span class="cart-count" id="cartCount" style="display: none;">0</span>
-            </div>
-            <div id="cartItems">
-                <p class="empty-cart">Sélectionnez des plats dans le menu</p>
-            </div>
-            <div class="cart-total" id="cartTotal" style="display: none;"></div>
-            
-            <div class="form-group">
-                <input type="text" id="name" placeholder="Votre nom">
-                <input type="tel" id="phone" placeholder="Votre téléphone">
-            </div>
-            
-            <button class="btn-order" id="orderBtn" disabled>Commander</button>
-            
-            <div class="success-message" id="successMsg">
-                <div class="emoji">✅</div>
-                <h3>Commande confirmée !</h3>
-                <p>Votre commande <strong>#<span id="orderNum"></span></strong> sera prête dans <strong><span id="readyTime"></span> minutes</strong></p>
-                <p style="margin-top: 10px; color: #666;">Le restaurant a bien reçu votre commande</p>
-            </div>
+        <div class="form-group">
+            <input type="text" id="name" placeholder="Votre nom">
+            <input type="tel" id="phone" placeholder="Téléphone">
+        </div>
+        
+        <button class="btn-order" id="orderBtn" disabled>Commander</button>
+        
+        <div class="success-message" id="successMsg">
+            <div class="emoji">✅</div>
+            <h3>Commande confirmée !</h3>
+            <p>N°<strong id="orderNum"></strong> - Prête dans <strong id="readyTime"></strong> min</p>
         </div>
     </div>
 
@@ -309,10 +336,18 @@
             `).join('');
         }
         
+        function toggleCart() {
+            document.getElementById('cartPanel').classList.toggle('active');
+            document.getElementById('cartOverlay').classList.toggle('active');
+        }
+        
         function addToCart(id) {
             const item = menu.find(i => i.id === id);
             cart.push(item);
             updateCart();
+            // Ouvre le panier automatiquement
+            document.getElementById('cartPanel').classList.add('active');
+            document.getElementById('cartOverlay').classList.add('active');
         }
         
         function removeFromCart(index) {
@@ -327,8 +362,8 @@
             const orderBtn = document.getElementById('orderBtn');
             
             if (cart.length === 0) {
-                cartItems.innerHTML = '<p class="empty-cart">Sélectionnez des plats dans le menu</p>';
-                cartCount.style.display = 'none';
+                cartItems.innerHTML = '<p class="empty-cart">Sélectionnez des plats</p>';
+                cartCount.textContent = '0';
                 cartTotal.style.display = 'none';
                 orderBtn.disabled = true;
             } else {
@@ -343,10 +378,9 @@
                 const total = cart.reduce((sum, item) => sum + item.price, 0);
                 const maxTime = Math.max(...cart.map(item => item.time));
                 
-                cartCount.style.display = 'flex';
                 cartCount.textContent = cart.length;
                 cartTotal.style.display = 'block';
-                cartTotal.innerHTML = `Total : ${total.toFixed(2)} € | Préparation : ~${maxTime} min`;
+                cartTotal.innerHTML = `Total : ${total.toFixed(2)} € | ⏱️ ~${maxTime} min`;
                 orderBtn.disabled = false;
             }
         }
@@ -362,8 +396,6 @@
             
             const orderNum = Math.floor(Math.random() * 1000);
             const maxTime = Math.max(...cart.map(item => item.time));
-            const readyAt = new Date();
-            readyAt.setMinutes(readyAt.getMinutes() + maxTime);
             
             document.getElementById('orderNum').textContent = orderNum;
             document.getElementById('readyTime').textContent = maxTime;
@@ -376,7 +408,9 @@
             
             setTimeout(() => {
                 document.getElementById('successMsg').style.display = 'none';
-            }, 10000);
+                document.getElementById('cartPanel').classList.remove('active');
+                document.getElementById('cartOverlay').classList.remove('active');
+            }, 8000);
         });
         
         displayMenu();
